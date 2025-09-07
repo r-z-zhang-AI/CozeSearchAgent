@@ -1,8 +1,0 @@
-{
-  "functionName": "coze_workflow",
-  "timeout": 60,
-  "memorySize": 256,
-  "runtime": "Nodejs18.15",
-  "environment": {},
-  "installDependency": true
-}
