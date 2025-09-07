@@ -73,3 +73,45 @@ coverage/
 # Keep important config files tracked by default. Uncomment if you want them ignored:
 cloudbaserc.json
 bot-config.yaml
+
+# Sensitive credentials, keys and local secrets
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*.crt
+*.cer
+*.pfx
+*.asc
+*.secret
+*.credentials
+credentials.json
+serviceAccount*.json
+google-services.json
+firebase*.json
+local.settings.json
+secrets.json
+.secrets/
+
+# Environment/local config
+.env.local
+.env.*.local
+.env.*.secret
+.npmrc
+.yarnrc
+
+# Cloud provider/CLI credentials
+.gcloud/
+*.gcloud.json
+*.azure*json
+
+# IDE / editor secrets
+.vscode/settings.json
+.vscode/*.code-workspace
+.idea/*workspace.xml
+
+# Prevent accidentally committing the full miniprogram source for public release (uncomment if desired)
+miniprogram/
+
+# Note: .gitignore prevents future commits of these files; files already in the remote history must be removed separately.
