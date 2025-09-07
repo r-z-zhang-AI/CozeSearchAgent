@@ -71,5 +71,5 @@ coverage/
 *.lock
 
 # Keep important config files tracked by default. Uncomment if you want them ignored:
-# cloudbaserc.json
-# bot-config.yaml
+cloudbaserc.json
+bot-config.yaml
