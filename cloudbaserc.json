@@ -1,0 +1,17 @@
+{
+  "envId": "cloud1-6g8dk2rk74e3d4e9",
+  "functionRoot": "./cloudfunctions",
+  "framework": {
+    "name": "wechat-miniprogram",
+    "plugins": {}
+  },
+  "functions": [
+    {
+      "name": "coze_workflow",
+      "timeout": 60,
+      "memorySize": 256,
+      "runtime": "Nodejs18.15",
+      "installDependency": true
+    }
+  ]
+}

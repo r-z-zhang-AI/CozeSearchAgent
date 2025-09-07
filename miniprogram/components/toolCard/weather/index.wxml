@@ -1,0 +1,42 @@
+<view class="weather-container {{isDay ? 'day' : 'night'}}">
+  <!-- 主要天气信息 -->
+  <view class="weather-main">
+    <view class="weather-header">
+      <view class="current-weather">
+        <image wx:if="{{today.dayweatherIcon}}" 
+               class="weather-icon-main" 
+               src="{{'./assets/' + (isDay ? today.dayweatherIcon : today.nightweatherIcon) + '.svg'}}" 
+               mode="aspectFit">
+        </image>
+        <view class="weather-info">
+          <text class="weather-desc">{{isDay ? today.dayweather : today.nightweather}}</text>
+          <text class="current-temp">{{isDay ? today.daytemp : today.nighttemp}}°</text>
+        </view>
+      </view>
+      <view class="location-info">
+        <text class="city-name">📍 {{city}}</text>
+        <text class="temp-range">{{today.nighttemp}}° ~ {{today.daytemp}}°</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 未来天气预报 -->
+  <view class="weather-forecast" wx:if="{{forecasts && forecasts.length}}">
+    <view class="forecast-title">未来天气</view>
+    <view class="forecast-list">
+      <block wx:for="{{forecasts}}" wx:key="date">
+        <view class="forecast-item">
+          <text class="forecast-date">{{item.date}}</text>
+          <view class="forecast-weather">
+            <image class="weather-icon-small" 
+                   src="{{'./assets/' + (isDay ? item.dayweatherIcon : item.nightweatherIcon) + '.svg'}}" 
+                   mode="aspectFit">
+            </image>
+            <text class="forecast-desc">{{isDay ? item.dayweather : item.nightweather}}</text>
+          </view>
+          <text class="forecast-temp">{{item.nighttemp}}°~{{item.daytemp}}°</text>
+        </view>
+      </block>
+    </view>
+  </view>
+</view>

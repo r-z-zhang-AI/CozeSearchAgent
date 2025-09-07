@@ -1,0 +1,5 @@
+{
+  "usingComponents": {
+    "custom-professor-list": "../../components/toolCard/professor-list/index"
+  }
+}

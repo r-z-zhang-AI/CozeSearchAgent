@@ -1,0 +1,72 @@
+<view class="professor-list" wx:if="{{candidates && candidates.length}}">
+  <block wx:for="{{candidates}}" wx:for-item="prof" wx:for-index="idx" wx:key="uniqueKey">
+    <view class="prof-card {{prof.displayScore < 30 ? 'low-match' : ''}}">
+      <!-- 右上角操作按钮 (非只读模式才显示) -->
+      <view wx:if="{{!readOnly}}" class="corner-actions">
+        <view class="action-btn star-btn {{prof.isFav ? 'favorited' : ''}}" data-id="{{prof.profId}}" data-index="{{idx}}" bindtap="onFavorite">
+          <image class="action-icon" src="/images/star.svg" mode="aspectFit"/>
+        </view>
+        <view class="action-btn share-btn" data-prof="{{prof}}" bindtap="onProfessorShare">
+          <image class="action-icon" src="/images/share.svg" mode="aspectFit"/>
+        </view>
+      </view>
+
+      <!-- 教授姓名和匹配度 -->
+      <view class="prof-header {{readOnly ? 'read-only' : ''}}">
+        <text class="prof-name">{{prof.name}}</text>
+        <view class="match-score" wx:if="{{prof.displayScore >= 0}}">
+          <text class="score-text">匹配度{{prof.displayScore}}%</text>
+        </view>
+      </view>
+
+      <!-- 学院信息 -->
+      <view class="prof-school">{{prof.school}}</view>
+
+      <!-- 研究领域标签 -->
+      <view class="research-areas" wx:if="{{prof.areas && prof.areas.length}}">
+        <block wx:for="{{prof.areas}}" wx:for-item="area" wx:for-index="areaIdx" wx:key="areaIdx">
+          <text class="area-tag">{{area}}</text>
+        </block>
+      </view>
+
+      <!-- 重点信息展示 -->
+      <view class="highlights" wx:if="{{prof.highlights && prof.highlights.length}}">
+        <block wx:for="{{prof.highlights}}" wx:for-item="highlight" wx:for-index="hlIdx" wx:key="hlIdx">
+          <view class="highlight-item">• {{highlight}}</view>
+        </block>
+      </view>
+
+      <!-- 联系方式 -->
+      <view class="contact-info">
+        <view class="contact-item" wx:if="{{prof.email}}">
+          <text class="contact-label">邮箱：</text>
+          <text class="contact-value contact-link" user-select="true" data-text="{{prof.email}}" bindtap="copyToClipboard">{{prof.email}}</text>
+        </view>
+        <view class="contact-item" wx:if="{{prof.office}}">
+          <text class="contact-label">办公地点：</text>
+          <text class="contact-value">{{prof.office}}</text>
+        </view>
+        <view class="contact-item" wx:if="{{prof.phone}}">
+          <text class="contact-label">联系电话：</text>
+          <text class="contact-value contact-link" user-select="true" data-text="{{prof.phone}}" bindtap="copyToClipboard">{{prof.phone}}</text>
+        </view>
+        <view class="contact-item" wx:if="{{prof.homepages && prof.homepages.length}}">
+          <text class="contact-label">个人主页：</text>
+          <view class="homepage-list">
+            <block wx:for="{{prof.homepages}}" wx:for-item="homepage" wx:for-index="hpIdx" wx:key="hpIdx">
+              <text class="contact-value contact-link homepage-item" user-select="true" data-url="{{homepage}}" bindtap="openHomepage">• {{homepage}}</text>
+            </block>
+          </view>
+        </view>
+        <!-- 兼容旧版本的单个主页字段 -->
+        <view class="contact-item" wx:elif="{{prof.homepage}}">
+          <text class="contact-label">主页：</text>
+          <text class="contact-value contact-link" user-select="true" data-url="{{prof.homepage}}" bindtap="openHomepage">{{prof.homepage}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>
+<view wx:else class="empty-state">
+  <text class="empty-text">暂无推荐结果</text>
+</view> 

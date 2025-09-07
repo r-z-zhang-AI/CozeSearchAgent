@@ -1,0 +1,193 @@
+<!--pages/chatBot/chatBot.wxml-->
+<view class="chat-container">
+  <!-- 顶部操作条 -->
+  <view class="topbar {{multiSelectMode ? 'multi-select' : ''}}">
+    <view wx:if="{{!multiSelectMode}}" class="topbar-left-group">
+      <view class="topbar-left" bindtap="toggleSidebar">☰</view>
+      <view class="topbar-right" bindtap="createNewConversation">＋</view>
+    </view>
+    <view wx:if="{{!multiSelectMode}}" class="topbar-title">{{currentTitle || '对话'}}</view>
+    <view wx:if="{{!multiSelectMode}}" class="topbar-placeholder"></view>
+    
+    <!-- 多选模式的工具栏 -->
+    <view wx:if="{{multiSelectMode}}" class="multi-select-toolbar">
+      <view class="multi-select-left" bindtap="exitMultiSelectMode">取消</view>
+      <view class="multi-select-title">已选择 {{selectedMessagesCount}} 项</view>
+      <view class="multi-select-right" bindtap="showSharePanel">分享</view>
+    </view>
+  </view>
+
+  <!-- 收藏悬浮按钮 -->
+  <movable-area class="fab-area">
+    <movable-view class="fav-fab" direction="all" x="{{fabX}}" y="{{fabY}}" out-of-bounds="true" inertia="true" damping="100" friction="1" bindchange="onFabChange" bindtap="goFavorites" disabled="{{false}}">
+      <image class="fab-icon" src="/images/star.svg" mode="aspectFit"/>
+      <text class="fab-text">收藏</text>
+    </movable-view>
+  </movable-area>
+
+  <!-- 侧边栏与遮罩 -->
+  <view wx:if="{{sidebarOpen}}" class="sidebar-mask" bindtap="toggleSidebar"></view>
+  <view class="sidebar {{sidebarOpen ? 'open' : ''}}">
+    <view class="sidebar-header">历史会话</view>
+    <scroll-view class="sidebar-list" scroll-y="true">
+      <block wx:for="{{conversations}}" wx:key="conversationId">
+        <view class="conv-item {{item.conversationId === currentCid ? 'active' : ''}} {{item.showDelete ? 'deleting' : ''}}" 
+              data-cid="{{item.conversationId}}" 
+              bindtap="openConversation"
+              bindlongpress="showDeleteOption">
+          <view class="conv-title">{{item.title || '新对话'}}</view>
+          <view class="conv-sub">{{item.lastMsg || '...'}}</view>
+          <view class="conv-time">{{item.displayTime}}</view>
+          <view wx:if="{{item.showDelete}}"
+                class="delete-btn"
+                data-cid="{{item.conversationId}}"
+                bindtap="deleteConversation"
+                catchtap="stopPropagation">－</view>
+        </view>
+      </block>
+    </scroll-view>
+    <view class="sidebar-footer">
+      <button class="new-chat-btn" bindtap="createNewConversation">＋ 新对话</button>
+    </view>
+  </view>
+
+  <!-- 用户管理弹窗 -->
+  <view wx:if="{{showUserManager}}" class="user-manager-mask" bindtap="hideUserManager">
+    <view class="user-manager-modal" catchtap="stopPropagation">
+      <view class="user-manager-header">
+        <text class="user-manager-title">用户管理</text>
+        <text class="user-manager-close" bindtap="hideUserManager">×</text>
+      </view>
+      <view class="user-manager-content">
+        <view class="current-user-info">
+          <text class="current-user-label">当前用户：</text>
+          <text class="current-user-name">{{currentUserDisplayName || currentUserId}}</text>
+        </view>
+        
+        <view class="user-list-section">
+          <text class="section-title">切换用户</text>
+          <view class="user-list">
+            <view wx:for="{{userList}}" wx:key="id" 
+                  class="user-item {{item.isCurrent ? 'current' : ''}}"
+                  data-user-id="{{item.id}}"
+                  bindtap="switchUser">
+              <text class="user-name">{{item.displayName}}</text>
+              <text wx:if="{{item.isCurrent}}" class="current-badge">当前</text>
+            </view>
+          </view>
+        </view>
+        
+        <view class="user-actions">
+          <button class="action-btn primary" bindtap="createNewUser">创建新用户</button>
+          <button class="action-btn secondary" bindtap="deleteCurrentUser">删除当前用户</button>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 聊天消息区域 -->
+  <scroll-view class="chat-messages" scroll-y="true" scroll-top="{{scrollTop}}" scroll-into-view="{{scrollToView}}">
+    <!-- 欢迎消息 -->
+    <view wx:if="{{messages.length === 0}}" class="welcome-message">
+      <view class="welcome-content">
+        <text class="welcome-title">你好！🎓</text>
+        <text class="welcome-desc">告诉我你的研究方向或业务场景，我会从教师知识库中匹配3–5位最合适的教授，并给出匹配理由与联系方式。</text>
+        <view class="welcome-examples">
+          <text class="example-title">你可以这样问：</text>
+          <view class="example-item" bindtap="onExampleTap" data-text="我想找计算机视觉/大模型方向的合作教授，偏工程落地">• 我想找计算机视觉/大模型方向的合作教授，偏工程落地</view>
+          <view class="example-item" bindtap="onExampleTap" data-text="新能源电池热管理需要顾问，推荐3位">• 新能源电池热管理需要顾问，推荐3位</view>
+          <view class="example-item" bindtap="onExampleTap" data-text="医学影像+多模态AI，有哪些合适的老师？">• 医学影像+多模态AI，有哪些合适的老师？</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 消息列表 -->
+    <block wx:for="{{messages}}" wx:key="id">
+      <view class="message-item" id="msg-{{item.id}}">
+        <!-- 用户消息 -->
+        <view wx:if="{{item.type === 'user'}}" class="user-message">
+          <view class="message-content">{{item.content}}</view>
+        </view>
+        
+        <!-- 助手消息 -->
+        <view wx:elif="{{item.type === 'assistant'}}" class="assistant-message" data-msg-id="{{item.id}}" bindlongpress="onMessageLongPress">
+          <!-- 多选模式下的勾选框 -->
+          <view wx:if="{{multiSelectMode}}" class="message-checkbox" data-msg-id="{{item.id}}" bindtap="toggleMessageSelection">
+            <image wx:if="{{item.selected}}" class="checkbox-icon" src="/images/tick.svg" mode="aspectFit"/>
+            <view wx:else class="checkbox-empty"></view>
+          </view>
+          
+          <view class="message-content">{{item.content}}</view>
+          <!-- 教授卡片 -->
+          <view wx:if="{{item.cardData}}" class="card-container">
+            <custom-professor-list cardData="{{item.cardData}}" multiSelectMode="{{multiSelectMode}}" messageSelected="{{item.selected}}"></custom-professor-list>
+          </view>
+        </view>
+
+        <!-- 加载消息 -->
+        <view wx:elif="{{item.type === 'loading'}}" class="loading-message">
+          <view class="loading-content">
+            <!-- 进度条和百分比 -->
+            <view class="progress-container">
+              <view class="progress-info">
+                <text class="loading-text">{{item.content}}</text>
+                <text class="progress-percentage">{{item.progress || 0}}%</text>
+              </view>
+              <view class="progress-bar">
+                <view class="progress-fill" style="width: {{item.progress || 0}}%"></view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+  </scroll-view>
+
+  <!-- 输入区域 -->
+  <view class="input-area">
+    <view class="input-wrapper">
+      <textarea class="message-input" 
+             value="{{inputValue}}" 
+             placeholder="请描述您的科研需求或研究方向..." 
+             bindinput="onInput"
+             focus="{{inputFocus}}"
+             disabled="{{sending}}"
+             auto-height="true"
+             maxlength="1000"
+             show-confirm-bar="{{false}}"
+             adjust-position="{{true}}"
+             cursor-spacing="{{20}}" />
+      <!-- 发送按钮 - 始终显示用于调试 -->
+      <view class="send-btn {{inputValue.trim() && !sending ? '' : 'disabled'}}" 
+              bindtap="onSend"
+              catchtap="onSend">
+        <image class="send-icon" src="/images/send.svg" mode="aspectFit"/>
+      </view>
+    </view>
+  </view>
+
+  <!-- 分享操作面板 -->
+  <view wx:if="{{showSharePanel}}" class="share-panel-mask" bindtap="hideSharePanel">
+    <view class="share-panel" catchtap="stopPropagation">
+      <view class="share-panel-header">分享选中内容</view>
+      <view class="share-actions">
+        <view class="share-action-item" bindtap="shareToWechat">
+          <image class="share-action-icon" src="/images/wechat-share.svg" mode="aspectFit"/>
+          <text class="share-action-text">微信分享</text>
+        </view>
+        <view class="share-action-item" bindtap="shareAsLongImage">
+          <image class="share-action-icon" src="/images/share-long-image.svg" mode="aspectFit"/>
+          <text class="share-action-text">截图分享</text>
+        </view>
+        <view class="share-action-item" bindtap="copyShareLink">
+          <image class="share-action-icon" src="/images/copy-link.svg" mode="aspectFit"/>
+          <text class="share-action-text">复制链接</text>
+        </view>
+      </view>
+      <view class="share-tips">
+        <text class="tips-text">💡 提示：截图分享可获得最佳视觉效果</text>
+      </view>
+      <view class="share-panel-cancel" bindtap="exitMultiSelectMode">取消</view>
+    </view>
+  </view>
+</view>

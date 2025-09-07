@@ -1,0 +1,128 @@
+/* 美食列表容器 */
+.food-list-container {
+  padding: 20rpx;
+}
+
+.food-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+}
+
+/* 美食卡片 */
+.food-card {
+  background: #ffffff;
+  border-radius: 20rpx;
+  overflow: hidden;
+  box-shadow: 0 6rpx 24rpx rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: 1px solid #f0f0f0;
+}
+
+.food-card:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 3rpx 12rpx rgba(0, 0, 0, 0.12);
+}
+
+/* 图片容器 */
+.food-image-container {
+  position: relative;
+  width: 100%;
+  height: 280rpx;
+  overflow: hidden;
+}
+
+.food-image {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.food-card:active .food-image {
+  transform: scale(1.05);
+}
+
+.food-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.food-card:active .food-overlay {
+  opacity: 1;
+}
+
+.view-detail {
+  color: white;
+  font-size: 24rpx;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  backdrop-filter: blur(10rpx);
+}
+
+/* 美食信息 */
+.food-info {
+  padding: 20rpx 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.food-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.food-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.food-price {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #ff6b6b;
+}
+
+.food-rating {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.rating-star {
+  font-size: 20rpx;
+}
+
+.rating-score {
+  font-size: 22rpx;
+  color: #666;
+  font-weight: 500;
+}
+
+.food-desc {
+  font-size: 22rpx;
+  color: #666;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

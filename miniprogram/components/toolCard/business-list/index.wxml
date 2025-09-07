@@ -1,0 +1,49 @@
+<!-- 商家列表组件 -->
+<view class="business-list-container" wx:if="{{isFoodCategory}}">
+  <scroll-view class="business-scroll" scroll-y="true">
+    <view class="business-grid">
+      <block wx:for="{{restaurants}}" wx:key="id">
+        <view class="business-card" data-id="{{item.uid}}" bindtap="onCardTap">
+          
+          <!-- 商家图片 -->
+          <view class="business-image-container">
+            <image class="business-image" src="{{item.image}}" mode="aspectFill"></image>
+            <view class="distance-badge">{{item.distance}}m</view>
+          </view>
+          
+          <!-- 商家信息 -->
+          <view class="business-info">
+            <!-- 标题和评分 -->
+            <view class="business-header">
+              <text class="business-name">{{item.name}}</text>
+              <view class="rating-container">
+                <text class="rating-score">⭐ {{item.rating}}</text>
+                <text class="review-count">({{item.reviews}})</text>
+              </view>
+            </view>
+            
+            <!-- 描述 -->
+            <text class="business-desc">{{item.description}}</text>
+            
+            <!-- 联系信息 -->
+            <view class="contact-section">
+              <view class="contact-item" wx:if="{{item.telephone}}">
+                <text class="contact-icon">📞</text>
+                <text class="contact-text">{{item.telephone}}</text>
+              </view>
+              <view class="contact-item" wx:if="{{item.address}}">
+                <text class="contact-icon">📍</text>
+                <text class="contact-text">{{item.address}}</text>
+              </view>
+            </view>
+            
+            <!-- 底部按钮 -->
+            <button class="call-button" bindtap="onCallTap" data-phone="{{item.telephone}}" wx:if="{{item.telephone}}">
+              📞 电话预订
+            </button>
+          </view>
+        </view>
+      </block>
+    </view>
+  </scroll-view>
+</view>

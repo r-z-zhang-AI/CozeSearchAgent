@@ -1,0 +1,1198 @@
+// pages/chatBot/chatBot.js
+const userManager = require('../../utils/userManager');
+
+Page({
+  /**
+   * 页面的初始数据
+   */
+  data: {
+    fabX: 600,
+    fabY: 900,
+    // 聊天相关数据
+    messages: [],
+    inputValue: '',
+    inputFocus: false,
+    sending: false,
+    scrollTop: 0,
+    scrollToView: '',
+    messageId: 0,
+     // 会话相关
+     sidebarOpen: false,
+     conversations: [],
+     currentCid: '',
+     currentTitle: '',
+     // 用户管理
+     currentUserId: '',
+     userList: [],
+     showUserManager: false,
+     currentUserDisplayName: '',
+     // 多选和分享功能
+     multiSelectMode: false,
+     selectedMessagesCount: 0,
+     showSharePanel: false,
+  },
+  onFabChange: function(e){
+    const detail = e.detail || {};
+    const x = detail.x;
+    const y = detail.y;
+    const source = detail.source;
+    if (source) {
+      this.setData({ fabX: x, fabY: y });
+      try { wx.setStorageSync('favFabPos', { x: x, y: y }); } catch (err) {}
+    }
+  },
+  goFavorites: function(){
+    wx.navigateTo({ url: '/pages/favorites/favorites' });
+  },
+  /**
+   * 生命周期函数--监听页面加载
+   */
+  onLoad: function(options) {
+    // 默认定位到输入区"+"号上方一点
+    const { windowWidth, windowHeight } = wx.getWindowInfo();
+    const defaultX = windowWidth - 120;
+    const defaultY = windowHeight - 180;
+    try {
+      const saved = wx.getStorageSync('favFabPos');
+      if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
+        this.setData({ fabX: saved.x, fabY: saved.y });
+      }
+      
+      // 初始化用户管理
+      const currentUserId = userManager.getCurrentUserId();
+      const userList = userManager.getUserList();
+      this.setData({ 
+        currentUserId, 
+        currentUserDisplayName: userManager.getUserDisplayName(currentUserId),
+        userList: userList.map(id => ({
+          id,
+          displayName: userManager.getUserDisplayName(id),
+          isCurrent: id === currentUserId
+        }))
+      });
+      
+      // 加载当前用户的会话列表
+      this.loadUserConversations();
+    } catch (err) {
+      console.error('页面加载失败:', err);
+    }
+    if (!this.data.fabX || !this.data.fabY) this.setData({ fabX: defaultX, fabY: defaultY });
+  },
+
+  // 用户管理相关方法
+  loadUserConversations: function() {
+    try {
+      const conversationsKey = userManager.getUserConversationsKey();
+      const currentCidKey = userManager.getUserCurrentCidKey();
+      
+      const conversations = wx.getStorageSync(conversationsKey) || [];
+      const currentCid = wx.getStorageSync(currentCidKey) || (conversations[0] && conversations[0].conversationId) || '';
+      
+      this.setData({ conversations, currentCid });
+      if (currentCid) {
+        this.loadConversation(currentCid);
+      }
+    } catch (err) {
+      console.error('加载用户会话失败:', err);
+    }
+  },
+
+  toggleUserManager: function() {
+    this.setData({ showUserManager: !this.data.showUserManager });
+  },
+
+  createNewUser: function() {
+    try {
+      const newUserId = userManager.createNewUser();
+      const userList = userManager.getUserList();
+      this.setData({ 
+        currentUserId: newUserId,
+        userList: userList.map(id => ({
+          id,
+          displayName: userManager.getUserDisplayName(id),
+          isCurrent: id === newUserId
+        })),
+        showUserManager: false,
+        conversations: [],
+        currentCid: '',
+        messages: [],
+        currentTitle: '新对话'
+      });
+      
+      wx.showToast({
+        title: '已创建新用户',
+        icon: 'success',
+        duration: 1500
+      });
+    } catch (e) {
+      console.error('创建用户失败:', e);
+      wx.showToast({
+        title: '创建失败',
+        icon: 'error'
+      });
+    }
+  },
+
+  switchUser: function(e) {
+    const userId = e.currentTarget.dataset.userId;
+    if (!userId || userId === this.data.currentUserId) return;
+    
+    try {
+      userManager.switchUser(userId);
+      const userList = userManager.getUserList();
+      this.setData({ 
+        currentUserId: userId,
+        currentUserDisplayName: userManager.getUserDisplayName(userId),
+        userList: userList.map(id => ({
+          id,
+          displayName: userManager.getUserDisplayName(id),
+          isCurrent: id === userId
+        })),
+        showUserManager: false
+      });
+      
+      // 加载新用户的会话数据
+      this.loadUserConversations();
+      
+      wx.showToast({
+        title: '已切换用户',
+        icon: 'success',
+        duration: 1500
+      });
+    } catch (e) {
+      console.error('切换用户失败:', e);
+      wx.showToast({
+        title: '切换失败',
+        icon: 'error'
+      });
+    }
+  },
+
+  // 顶部&侧边栏交互
+  toggleSidebar: function(){ 
+    if (this.data.sidebarOpen) {
+      this.hideAllDeleteOptions();
+    }
+    this.setData({ sidebarOpen: !this.data.sidebarOpen }); 
+  },
+  
+  // 直接创建新会话，不弹窗
+  createNewConversation: function(){
+    this.hideAllDeleteOptions();
+    const cid = 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const conv = { conversationId: cid, title: '新对话', lastMsg: '', updatedAt: Date.now() };
+    const list = [conv].concat(this.data.conversations || []);
+    
+    // 使用用户专用的存储key
+    const conversationsKey = userManager.getUserConversationsKey();
+    const currentCidKey = userManager.getUserCurrentCidKey();
+    
+    this.setData({ 
+      conversations: list, 
+      currentCid: cid, 
+      messages: [], 
+      currentTitle: '新对话',
+      messageId: 0,
+      sidebarOpen: false  // 直接关闭侧边栏
+    });
+    
+    wx.setStorageSync(conversationsKey, list);
+    wx.setStorageSync(currentCidKey, cid);
+  },
+  openConversation: function(e){
+    const cid = (e.currentTarget.dataset || {}).cid;
+    if (!cid) return;
+    // 如果当前有删除按钮显示，先隐藏所有删除按钮
+    const hasDelete = this.data.conversations.some(c => c.showDelete);
+    if (hasDelete) {
+      this.hideAllDeleteOptions();
+      return;
+    }
+    
+    // 直接切换到选择的会话，关闭侧边栏
+    const conversations = this.data.conversations || [];
+    const selectedConv = conversations.find(c => c.conversationId === cid);
+    
+    if (selectedConv) {
+      // 加载该会话的消息
+      const conversationKey = userManager.getUserConversationKey(cid);
+      const msgList = wx.getStorageSync(conversationKey) || [];
+      
+      this.setData({ 
+        currentCid: cid, 
+        messages: msgList, 
+        currentTitle: selectedConv.title,
+        sidebarOpen: false  // 自动关闭侧边栏
+      });
+      
+      // 保存当前选中的会话ID
+      const currentCidKey = userManager.getUserCurrentCidKey();
+      wx.setStorageSync(currentCidKey, cid);
+    }
+  },
+  showDeleteOption: function(e){
+    const cid = (e.currentTarget.dataset || {}).cid;
+    if (!cid) return;
+    const list = this.data.conversations.map(function(c){
+      return Object.assign({}, c, { showDelete: c.conversationId === cid });
+    });
+    this.setData({ conversations: list });
+  },
+  hideAllDeleteOptions: function(){
+    const list = this.data.conversations.map(function(c){
+      return Object.assign({}, c, { showDelete: false });
+    });
+    this.setData({ conversations: list });
+  },
+  deleteConversation: function(e){
+    const cid = (e.currentTarget.dataset || {}).cid;
+    if (!cid) return;
+    // 直接删除（无需弹窗），更符合你的快速操作
+    this.confirmDeleteConversation(cid);
+  },
+  confirmDeleteConversation: function(cid){
+    try {
+      // 从会话列表中移除
+      const newList = (this.data.conversations || []).filter(c => c.conversationId !== cid);
+      this.setData({ conversations: newList.slice() });
+      
+      // 使用用户专用的存储keys
+      const conversationsKey = userManager.getUserConversationsKey();
+      const conversationKey = userManager.getUserConversationKey(cid);
+      
+      wx.setStorageSync(conversationsKey, newList);
+      
+      // 删除会话消息数据
+      wx.removeStorageSync(conversationKey);
+      
+      // 如果删除的是当前会话
+      if (this.data.currentCid === cid) {
+        if (newList.length > 0) {
+          // 切换到第一个会话
+          const firstCid = newList[0].conversationId;
+          const currentCidKey = userManager.getUserCurrentCidKey();
+          const firstConvKey = userManager.getUserConversationKey(firstCid);
+          
+          this.setData({ 
+            currentCid: firstCid,
+            currentTitle: newList[0].title,
+            messages: wx.getStorageSync(firstConvKey) || []
+          });
+          wx.setStorageSync(currentCidKey, firstCid);
+        } else {
+          // 清空当前数据
+          this.setData({ currentCid: '', messages: [], currentTitle: '新对话' });
+          const currentCidKey = userManager.getUserCurrentCidKey();
+          wx.removeStorageSync(currentCidKey);
+        }
+      }
+      
+      // 隐藏所有删除按钮
+      this.hideAllDeleteOptions();
+      
+      wx.nextTick(() => {
+        this.setData({ conversations: (this.data.conversations || []).slice() });
+      });
+    } catch (e) {
+      console.error('删除失败', e);
+    }
+  },
+
+  // 用户管理界面控制 
+  toggleUserManager: function() {
+    this.setData({ showUserManager: !this.data.showUserManager });
+  },
+
+  hideUserManager: function() {
+    this.setData({ showUserManager: false });
+  },
+
+  createNewUser: function() {
+    try {
+      const newUserId = userManager.createUser();
+      const userList = userManager.getUserList();
+      
+      this.setData({ 
+        currentUserId: newUserId,
+        currentUserDisplayName: userManager.getUserDisplayName(newUserId),
+        userList: userList.map(id => ({
+          id,
+          displayName: userManager.getUserDisplayName(id),
+          isCurrent: id === newUserId
+        })),
+        showUserManager: false
+      });
+      
+      // 加载新用户的会话数据（为空）
+      this.loadUserConversations();
+      
+      wx.showToast({
+        title: '新用户创建成功',
+        icon: 'success',
+        duration: 1500
+      });
+    } catch (e) {
+      console.error('创建用户失败:', e);
+      wx.showToast({
+        title: '创建失败',
+        icon: 'error'
+      });
+    }
+  },
+
+  deleteCurrentUser: function() {
+    if (this.data.userList.length <= 1) {
+      wx.showToast({
+        title: '至少需要保留一个用户',
+        icon: 'none'
+      });
+      return;
+    }
+
+    const that = this;
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除当前用户吗？用户的所有数据将被清除。',
+      success: function(res) {
+        if (res.confirm) {
+          try {
+            const deletedUserId = that.data.currentUserId;
+            userManager.deleteUser(deletedUserId);
+            
+            // 切换到第一个剩余用户
+            const userList = userManager.getUserList();
+            const newUserId = userList[0];
+            userManager.switchUser(newUserId);
+            
+            that.setData({ 
+              currentUserId: newUserId,
+              currentUserDisplayName: userManager.getUserDisplayName(newUserId),
+              userList: userList.map(id => ({
+                id,
+                displayName: userManager.getUserDisplayName(id),
+                isCurrent: id === newUserId
+              })),
+              showUserManager: false
+            });
+            
+            // 加载新用户的会话数据
+            that.loadUserConversations();
+            
+            wx.showToast({
+              title: '用户已删除',
+              icon: 'success',
+              duration: 1500
+            });
+          } catch (e) {
+            console.error('删除用户失败:', e);
+            wx.showToast({
+              title: '删除失败',
+              icon: 'error'
+            });
+          }
+        }
+      }
+    });
+  },
+
+  // 阻止事件冒泡
+  stopPropagation: function(e){
+    // 阻止事件冒泡
+  },
+  loadConversation: function(cid){
+    try {
+      const conversationKey = userManager.getUserConversationKey(cid);
+      const rawMessages = wx.getStorageSync(conversationKey) || [];
+      
+      // 确保每条消息都有唯一的ID和完整的结构
+      const messages = rawMessages.map((msg, index) => {
+        if (!msg.id) {
+          // 为没有ID的历史消息生成唯一ID
+          msg.id = 'm_legacy_' + Date.now() + '_' + index + '_' + Math.random().toString(36).substr(2, 6);
+        }
+        // 确保消息有正确的类型
+        if (!msg.type) {
+          msg.type = msg.role === 'user' ? 'user' : 'assistant';
+        }
+        return msg;
+      });
+      
+      const conv = (this.data.conversations.find(c=>c.conversationId===cid)||{});
+      const title = conv.title || '对话';
+      const list = (this.data.conversations || []).map(function(c){
+        const t = new Date(c.updatedAt || Date.now());
+        const pad = n=> (n<10?'0':'')+n;
+        const ds = `${t.getMonth()+1}-${pad(t.getDate())} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
+        return Object.assign({}, c, { displayTime: ds });
+      });
+      
+      this.setData({ 
+        conversations: list, 
+        messages, 
+        currentTitle: title, 
+        scrollToView: messages.length ? ('msg-'+messages[messages.length-1].id) : '' 
+      });
+      
+      console.log('加载对话历史:', { cid, messageCount: messages.length });
+    } catch (e) {
+      console.error('加载对话失败:', e);
+    }
+  },
+
+  // 输入框事件
+  onInput: function(e) {
+    this.setData({ inputValue: e.detail.value });
+  },
+
+  // 示例点击
+  onExampleTap: function(e) {
+    const text = e.currentTarget.dataset.text;
+    this.setData({ inputValue: text });
+    this.onSend();
+  },
+
+  // 重置对话（清除conversation_id）
+  resetConversation: function() {
+    this.setData({
+      conversation_id: ''
+    });
+    console.log('🔄 对话已重置，将开启新的对话');
+    wx.showToast({
+      title: '对话已重置',
+      icon: 'success'
+    });
+  },
+
+  // 发送消息
+  onSend: function() {
+    const input = this.data.inputValue.trim();
+    if (!input || this.data.sending) return;
+
+    this.hideAllDeleteOptions();
+    this.setData({ sending: true, inputValue: '', inputFocus: false });
+
+    // 添加用户消息
+    const userMsgId = this.addMessage({
+      type: 'user',
+      content: input,
+    });
+
+    // 添加加载消息
+    const loadingMsgId = this.addMessage({
+      type: 'loading',
+      content: '正在为您搜索匹配的教授...',
+      progress: 0
+    });
+
+    // 启动进度动画
+    this.startProgressAnimation(loadingMsgId);
+
+    const self = this;
+    
+    // 调用扣子工作流
+    this.callCozeWorkflow(input).then(function(result) {
+      // 立即清理所有loading消息，并在清理完成后添加助手回复
+      self.clearAllLoadingMessages(function() {
+        console.log('处理返回结果:', result);
+        
+        // 检查是否有教授卡片数据
+        if (result && result.card_data && 
+            result.card_data.type === 'professor_list' && 
+            result.card_data.professors && 
+            result.card_data.professors.length > 0) {
+          // 宽泛问题：只显示简洁提示语和教授卡片
+          self.addMessage({
+            type: 'assistant',
+            content: '根据您的需求，为您找到以下教授：',
+            cardData: result.card_data,
+          });
+        } else if (result && result.response_text && result.response_text.trim()) {
+          // 详细询问或其他情况：显示自然语言回复
+          self.addMessage({
+            type: 'assistant',
+            content: result.response_text,
+          });
+        } else {
+          // 没有找到任何有效信息
+          self.addMessage({
+            type: 'assistant',
+            content: '抱歉，暂未找到匹配的教授，请尝试调整搜索条件。',
+          });
+        }
+      });
+
+      // 持久化到当前会话
+      try {
+        const cid = self.data.currentCid || ('c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+        if (!self.data.currentCid) {
+          self.setData({ currentCid: cid });
+          const currentCidKey = userManager.getUserCurrentCidKey();
+          wx.setStorageSync(currentCidKey, cid);
+        }
+        
+        // 保存消息到会话
+        const conversationKey = userManager.getUserConversationKey(self.data.currentCid || cid);
+        const messages = self.data.messages.filter(function(msg) {
+          return msg.type === 'user' || msg.type === 'assistant';
+        });
+        wx.setStorageSync(conversationKey, messages);
+        
+        // 保存对话到历史记录（使用新的函数）
+        self.saveConversationToHistory();
+        
+      } catch (e) {
+        console.error('保存对话失败:', e);
+      }
+
+      self.setData({ sending: false, inputFocus: true });
+    }).catch(function(error) {
+      console.error('调用工作流失败:', error);
+      // 立即清理所有loading消息
+      self.clearAllLoadingMessages(function() {
+        self.addMessage({
+          type: 'assistant',
+          content: '抱歉，服务暂时不可用，请稍后重试。',
+        });
+      });
+      
+      self.setData({ sending: false, inputFocus: true });
+    });
+  },
+
+  // 调用扣子智能体（使用Chat API）
+  callCozeWorkflow: function(userInput) {
+    const self = this;
+    const bot_id = wx.getStorageSync('coze_bot_id') || '7537877620181041204'; // 你的智能体ID
+    
+    // 使用当前会话ID作为conversation_id，实现多轮对话
+    const conversation_id = this.data.currentCid || '';
+    
+    console.log('调用扣子智能体:', { userInput, bot_id, conversation_id });
+    
+    return wx.cloud.callFunction({
+      name: 'coze_workflow',
+      data: {
+        input: userInput,
+        bot_id: bot_id,
+        conversation_id: conversation_id,
+        user_id: 'miniprogram_user', // 小程序用户标识
+      }
+    }).then(function(res) {
+      console.log('云函数返回结果:', res);
+      
+      // 检查返回结果的基本结构
+      if (!res) {
+        throw new Error('云函数返回为空');
+      }
+      
+      if (res.errMsg && res.errMsg !== 'cloud.callFunction:ok') {
+        throw new Error(`云函数调用失败: ${res.errMsg}`);
+      }
+      
+      const r = res.result;
+      console.log('解析的result:', r);
+      
+      if (!r) {
+        throw new Error('云函数返回结果为空');
+      }
+      
+      if (r.code !== 0) {
+        const errorMsg = r.message || r.msg || '未知错误';
+        console.error('❌ 扣子智能体返回错误:', r);
+        throw new Error(`智能体调用失败: ${errorMsg}`);
+      }
+      
+      const d = r.data;
+      console.log('数据部分:', d);
+      
+      if (!d) {
+        throw new Error('智能体返回数据为空');
+      }
+      
+      // 更新对话ID（如果扣子返回了新的conversation_id）
+      if (d.conversation_id && d.conversation_id !== self.data.currentCid) {
+        console.log('更新对话ID:', { 原ID: self.data.currentCid, 新ID: d.conversation_id });
+        // 保存扣子返回的真正conversation_id，用于后续多轮对话
+        self.setData({ currentCid: d.conversation_id });
+        wx.setStorageSync('current_cid', d.conversation_id);
+      }
+      
+      return {
+        response_text: d.response_text || '抱歉，暂时无法为您提供推荐。',
+        card_data: d.card_data || null
+      };
+    }).catch(function(error) {
+      console.error('💥 扣子智能体调用异常:', error);
+      throw error;
+    });
+  },
+
+  // 添加消息
+  addMessage: function(msg) {
+    const id = 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const message = Object.assign({ id: id }, msg);
+    
+    // 如果是助手消息，自动清理所有loading消息
+    let messages;
+    if (msg.type === 'assistant') {
+      messages = this.data.messages.filter(function(m) {
+        return m.type !== 'loading';
+      }).concat([message]);
+    } else {
+      messages = this.data.messages.concat([message]);
+    }
+    
+    this.setData({ 
+      messages: messages,
+      scrollToView: 'msg-' + id,
+    });
+    
+    return id;
+  },
+
+  // 移除消息
+  removeMessage: function(id) {
+    const messages = this.data.messages.filter(function(msg) {
+      return msg.id !== id;
+    });
+    this.setData({ messages: messages });
+  },
+
+  // 清理所有loading类型的消息
+  clearAllLoadingMessages: function(callback) {
+    const messages = this.data.messages.filter(function(msg) {
+      return msg.type !== 'loading';
+    });
+    
+    this.setData({ messages: messages }, function() {
+      if (callback) callback();
+    });
+    
+    // 同时清理所有进度定时器
+    if (this.progressIntervals) {
+      Object.values(this.progressIntervals).forEach(function(interval) {
+        clearInterval(interval);
+      });
+      this.progressIntervals = {};
+    }
+  },
+
+  // 更新消息
+  updateMessage: function(id, updates) {
+    const messages = this.data.messages.map(function(msg) {
+      if (msg.id === id) {
+        return Object.assign({}, msg, updates);
+      }
+      return msg;
+    });
+    this.setData({ messages: messages });
+  },
+
+  // 启动进度动画
+  startProgressAnimation: function(messageId) {
+    const self = this;
+    let progress = 0;
+    const maxProgress = 95; // 不到100%，等待真实结果
+    
+    const progressInterval = setInterval(function() {
+      if (progress < maxProgress) {
+        // 前期快速增长，后期缓慢
+        const increment = progress < 30 ? Math.random() * 8 + 2 : 
+                         progress < 60 ? Math.random() * 4 + 1 : 
+                         Math.random() * 2 + 0.5;
+        
+        progress = Math.min(progress + increment, maxProgress);
+        
+        // 更新进度
+        self.updateMessage(messageId, { 
+          progress: Math.floor(progress) 
+        });
+        
+        // 更新加载文本
+        if (progress > 80) {
+          self.updateMessage(messageId, { 
+            content: '正在生成推荐结果...',
+            progress: Math.floor(progress) 
+          });
+        } else if (progress > 50) {
+          self.updateMessage(messageId, { 
+            content: '正在分析匹配度...',
+            progress: Math.floor(progress) 
+          });
+        } else if (progress > 20) {
+          self.updateMessage(messageId, { 
+            content: '正在搜索教授数据库...',
+            progress: Math.floor(progress) 
+          });
+        }
+      } else {
+        clearInterval(progressInterval);
+      }
+    }, 100); // 每100ms更新一次
+    
+    // 存储interval用于清理
+    if (!this.progressIntervals) {
+      this.progressIntervals = {};
+    }
+    this.progressIntervals[messageId] = progressInterval;
+  },
+
+  // 完成进度动画
+  finishProgress: function(messageId) {
+    const self = this;
+    
+    // 清理进度更新
+    if (this.progressIntervals && this.progressIntervals[messageId]) {
+      clearInterval(this.progressIntervals[messageId]);
+      delete this.progressIntervals[messageId];
+    }
+    
+    // 检查消息是否还存在
+    const messageExists = this.data.messages.some(function(msg) {
+      return msg.id === messageId;
+    });
+    
+    if (!messageExists) {
+      return; // 消息已经被移除了
+    }
+    
+    // 快速完成到100%
+    this.updateMessage(messageId, { 
+      content: '分析完成！',
+      progress: 100 
+    });
+    
+    // 短暂显示100%后再移除
+    setTimeout(function() {
+      // 再次检查消息是否还存在
+      const stillExists = self.data.messages.some(function(msg) {
+        return msg.id === messageId;
+      });
+      
+      if (stillExists) {
+        self.removeMessage(messageId);
+      }
+    }, 800);
+  },
+
+  /**
+   * 生命周期函数--监听页面初次渲染完成
+   */
+  onReady: function() {},
+
+  /**
+   * 生命周期函数--监听页面显示
+   */
+  onShow: function() {},
+
+  /**
+   * 生命周期函数--监听页面隐藏
+   */
+  onHide: function() {},
+
+  /**
+   * 生命周期函数--监听页面卸载
+   */
+  onUnload: function() {
+    // 清理所有进度定时器
+    if (this.progressIntervals) {
+      Object.values(this.progressIntervals).forEach(function(interval) {
+        clearInterval(interval);
+      });
+      this.progressIntervals = {};
+    }
+  },
+
+  /**
+   * 页面相关事件处理函数--监听用户下拉动作
+   */
+  onPullDownRefresh: function() {},
+
+  /**
+   * 页面上拉触底事件的处理函数
+   */
+  onReachBottom: function() {},
+
+  /**
+   * 用户点击右上角分享
+   */
+  onShareAppMessage: function() {
+    return {
+      title: '科研合作智能助手',
+      path: '/pages/index/index'
+    }
+  },
+
+  // 多选和分享功能
+  onMessageLongPress: function(e) {
+    const msgId = e.currentTarget.dataset.msgId;
+    if (!msgId) return;
+    
+    // 进入多选模式
+    this.setData({ multiSelectMode: true });
+    
+    // 将长按的消息设为选中状态
+    this.toggleMessageSelection({ currentTarget: { dataset: { msgId } } });
+  },
+
+  toggleMessageSelection: function(e) {
+    const msgId = e.currentTarget.dataset.msgId;
+    if (!msgId) return;
+    
+    const messages = this.data.messages.map(msg => {
+      if (msg.id === msgId) {
+        return { ...msg, selected: !msg.selected };
+      }
+      return msg;
+    });
+    
+    const selectedCount = messages.filter(msg => msg.selected).length;
+    
+    this.setData({ 
+      messages,
+      selectedMessagesCount: selectedCount
+    });
+  },
+
+  exitMultiSelectMode: function() {
+    const messages = this.data.messages.map(msg => ({ ...msg, selected: false }));
+    this.setData({
+      multiSelectMode: false,
+      selectedMessagesCount: 0,
+      showSharePanel: false,
+      messages
+    });
+  },
+
+  showSharePanel: function() {
+    this.setData({ showSharePanel: true });
+  },
+
+  hideSharePanel: function() {
+    this.setData({ showSharePanel: false });
+  },
+
+  shareToWechat: function() {
+    const selectedMessages = this.data.messages.filter(msg => msg.selected);
+    if (selectedMessages.length === 0) {
+      wx.showToast({ title: '请先选择要分享的内容', icon: 'none' });
+      return;
+    }
+
+    // 生成分享链接
+    const shareData = this.generateShareData(selectedMessages);
+    
+    wx.showShareMenu({
+      withShareTicket: true,
+      menus: ['shareAppMessage', 'shareTimeline']
+    });
+
+    // 触发微信分享
+    wx.shareAppMessage({
+      title: '科研合作推荐结果',
+      path: `/pages/shared/shared?data=${encodeURIComponent(JSON.stringify(shareData))}`,
+      success: () => {
+        wx.showToast({ title: '分享成功', icon: 'success' });
+        this.exitMultiSelectMode();
+      }
+    });
+  },
+
+  shareAsLongImage: function() {
+    const selectedMessages = this.data.messages.filter(msg => msg.selected);
+    if (selectedMessages.length === 0) {
+      wx.showToast({ title: '请先选择要分享的内容', icon: 'none' });
+      return;
+    }
+
+    wx.showLoading({ title: '准备生成长图...' });
+    
+    // 使用微信小程序的截图分享功能
+    this.generateCanvasImage(selectedMessages);
+  },
+
+  generateCanvasImage: function(messages) {
+    const that = this;
+    
+    // 创建离屏canvas
+    const query = wx.createSelectorQuery();
+    query.select('.chat-messages')
+      .boundingClientRect(function(rect) {
+        if (!rect) {
+          wx.hideLoading();
+          wx.showToast({ title: '无法获取内容区域', icon: 'none' });
+          return;
+        }
+        
+        // 使用第三方截图工具或系统截图
+        that.triggerSystemShare(messages);
+      })
+      .exec();
+  },
+
+  triggerSystemShare: function(messages) {
+    wx.hideLoading();
+    
+    // 提供多种分享方案
+    wx.showActionSheet({
+      itemList: ['手机截图分享', '复制文字内容', '生成分享链接', '保存到相册提醒'],
+      success: (res) => {
+        switch(res.tapIndex) {
+          case 0: // 手机截图分享
+            this.guideUserScreenshot();
+            break;
+          case 1: // 复制文字内容
+            this.copyContentToClipboard(messages);
+            break;
+          case 2: // 生成分享链接
+            this.copyShareLink();
+            break;
+          case 3: // 保存到相册提醒
+            this.showSaveToAlbumGuide();
+            break;
+        }
+      }
+    });
+  },
+
+  guideUserScreenshot: function() {
+    wx.showModal({
+      title: '📱 截图分享指南',
+      content: '推荐使用手机自带的截图功能：\n\n• iPhone：同时按住电源键+音量↑键\n• 安卓：同时按住电源键+音量↓键\n• 长截图：部分手机支持滑动截取长图\n\n截图后可直接分享给好友！',
+      showCancel: true,
+      cancelText: '取消',
+      confirmText: '开始截图',
+      success: (res) => {
+        if (res.confirm) {
+          // 延迟一秒让用户准备
+          setTimeout(() => {
+            wx.showToast({ 
+              title: '请开始截图', 
+              icon: 'none',
+              duration: 3000
+            });
+          }, 1000);
+        }
+        this.exitMultiSelectMode();
+      }
+    });
+  },
+
+  showSaveToAlbumGuide: function() {
+    wx.showModal({
+      title: '💾 保存提醒',
+      content: '您可以：\n\n1. 先使用截图功能\n2. 然后保存截图到手机相册\n3. 随时从相册分享给朋友\n\n这样可以保留最完整的格式和样式！',
+      showCancel: false,
+      confirmText: '我知道了',
+      success: () => {
+        this.exitMultiSelectMode();
+      }
+    });
+  },
+
+  copyContentToClipboard: function(messages) {
+    let content = '📚 科研合作推荐结果\n';
+    content += '━━━━━━━━━━━━━━━━━━━━\n\n';
+    
+    messages.forEach((msg, msgIndex) => {
+      if (msg.type === 'user') {
+        content += `🔍 问题：${msg.content}\n\n`;
+      } else if (msg.type === 'assistant') {
+        if (msg.content) {
+          content += `💡 回答：${msg.content}\n\n`;
+        }
+        
+        if (msg.cardData && msg.cardData.professors) {
+          content += '👨‍🏫 推荐教授：\n';
+          msg.cardData.professors.forEach((prof, idx) => {
+            content += `\n${idx + 1}. ${prof.name}\n`;
+            content += `   🏛️ ${prof.school}\n`;
+            if (prof.areas && prof.areas.length > 0) {
+              content += `   🔬 ${prof.areas.join(', ')}\n`;
+            }
+            if (prof.email) {
+              content += `   📧 ${prof.email}\n`;
+            }
+            if (prof.office) {
+              content += `   📍 ${prof.office}\n`;
+            }
+            content += `   📊 匹配度：${prof.displayScore}%\n`;
+          });
+          content += '\n';
+        }
+      }
+      
+      // 在消息之间添加分隔线
+      if (msgIndex < messages.length - 1) {
+        content += '────────────────────\n\n';
+      }
+    });
+    
+    content += '\n📱 来源：科研合作智能助手';
+    
+    wx.setClipboardData({
+      data: content,
+      success: () => {
+        wx.showToast({ 
+          title: '内容已复制到剪贴板', 
+          icon: 'success',
+          duration: 2000
+        });
+        this.exitMultiSelectMode();
+      },
+      fail: () => {
+        wx.showToast({ title: '复制失败，请重试', icon: 'none' });
+      }
+    });
+  },
+
+  copyShareLink: function() {
+    const selectedMessages = this.data.messages.filter(msg => msg.selected);
+    if (selectedMessages.length === 0) {
+      wx.showToast({ title: '请先选择要分享的内容', icon: 'none' });
+      return;
+    }
+
+    const shareData = this.generateShareData(selectedMessages);
+    const shareUrl = `https://your-domain.com/shared?data=${encodeURIComponent(JSON.stringify(shareData))}`;
+    
+    wx.setClipboardData({
+      data: shareUrl,
+      success: () => {
+        wx.showToast({ title: '链接已复制', icon: 'success' });
+        this.exitMultiSelectMode();
+      }
+    });
+  },
+
+  generateShareData: function(messages) {
+    return {
+      timestamp: Date.now(),
+      conversationId: this.data.currentCid,
+      userId: this.data.currentUserId,
+      messages: messages.map(msg => ({
+        type: msg.type,
+        content: msg.content,
+        cardData: msg.cardData,
+        timestamp: msg.timestamp
+      }))
+    };
+  },
+
+  // 保存对话到历史记录
+  saveConversationToHistory: function() {
+    const conversationsKey = userManager.getUserConversationsKey();
+    const conversations = wx.getStorageSync(conversationsKey) || [];
+    const currentCid = this.data.currentCid;
+    const messages = this.data.messages;
+    
+    if (!currentCid || messages.length === 0) return;
+    
+    // 查找是否已存在该对话
+    const existingIndex = conversations.findIndex(conv => conv.conversationId === currentCid);
+    
+    // 获取最后一条消息作为预览
+    const lastMessage = messages[messages.length - 1];
+    const lastMsg = lastMessage ? 
+      (lastMessage.content || '教授推荐结果') : '新对话';
+    
+    // 生成或更新对话标题
+    const title = this.data.currentTitle || this.generateConversationTitle(messages);
+    
+    const conversationData = {
+      conversationId: currentCid,
+      title: title,
+      lastMsg: lastMsg.substring(0, 30) + (lastMsg.length > 30 ? '...' : ''),
+      timestamp: Date.now(),
+      displayTime: this.formatTime(Date.now()),
+      messageCount: messages.length
+    };
+    
+    if (existingIndex >= 0) {
+      // 更新已存在的对话
+      conversations[existingIndex] = conversationData;
+    } else {
+      // 添加新对话到开头
+      conversations.unshift(conversationData);
+    }
+    
+    // 限制历史记录数量，保留最近50个对话
+    if (conversations.length > 50) {
+      conversations.splice(50);
+    }
+    
+    // 保存到存储
+    wx.setStorageSync(conversationsKey, conversations);
+    
+    // 更新当前显示的标题
+    this.setData({ 
+      currentTitle: title,
+      conversations: conversations 
+    });
+  },
+
+  // AI生成对话标题
+  generateConversationTitle: function(messages) {
+    if (!messages || messages.length === 0) return '新对话';
+    
+    // 获取第一条用户消息
+    const firstUserMessage = messages.find(msg => msg.type === 'user');
+    if (!firstUserMessage) return '新对话';
+    
+    const content = firstUserMessage.content;
+    
+    // 根据关键词生成标题
+    const keywords = [
+      { patterns: [/机器学习|ML|深度学习|AI|人工智能/i], title: '机器学习合作咨询' },
+      { patterns: [/计算机视觉|CV|图像|视觉/i], title: '计算机视觉研究' },
+      { patterns: [/自然语言|NLP|语言模型/i], title: '自然语言处理' },
+      { patterns: [/数据挖掘|大数据|数据分析/i], title: '数据科学研究' },
+      { patterns: [/软件工程|系统设计|架构/i], title: '软件工程合作' },
+      { patterns: [/网络安全|信息安全|密码学/i], title: '网络安全研究' },
+      { patterns: [/生物信息|生物医学|医学/i], title: '生物医学工程' },
+      { patterns: [/化学|材料|化工/i], title: '化学材料研究' },
+      { patterns: [/物理|光学|量子/i], title: '物理学研究' },
+      { patterns: [/数学|统计|算法/i], title: '数学统计研究' }
+    ];
+    
+    // 尝试匹配关键词
+    for (const keyword of keywords) {
+      if (keyword.patterns.some(pattern => pattern.test(content))) {
+        return keyword.title;
+      }
+    }
+    
+    // 如果没有匹配到关键词，使用前20个字符
+    const shortContent = content.replace(/[^\u4e00-\u9fa5\w\s]/g, '').trim();
+    if (shortContent.length > 20) {
+      return shortContent.substring(0, 20) + '...';
+    } else if (shortContent.length > 0) {
+      return shortContent;
+    }
+    
+    return '科研合作咨询';
+  },
+
+  // 格式化时间显示
+  formatTime: function(timestamp) {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diff = now - date;
+    
+    if (diff < 60000) { // 1分钟内
+      return '刚刚';
+    } else if (diff < 3600000) { // 1小时内
+      return Math.floor(diff / 60000) + '分钟前';
+    } else if (diff < 86400000) { // 24小时内
+      return Math.floor(diff / 3600000) + '小时前';
+    } else if (diff < 604800000) { // 7天内
+      return Math.floor(diff / 86400000) + '天前';
+    } else {
+      return date.toLocaleDateString();
+    }
+  },
+
+  stopPropagation: function() {
+    // 阻止事件冒泡
+  }
+});
