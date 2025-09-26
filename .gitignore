@@ -111,7 +111,6 @@ secrets.json
 .vscode/*.code-workspace
 .idea/*workspace.xml
 
-# Prevent accidentally committing the full miniprogram source for public release (uncomment if desired)
-miniprogram/
+
 
 # Note: .gitignore prevents future commits of these files; files already in the remote history must be removed separately.
