@@ -1,9 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "custom-professor-list": "/components/toolCard/professor-list/index",
-    "custom-map": "/components/toolCard/map/index",
-    "custom-weather": "/components/toolCard/weather/index",
-    "custom-business-list": "/components/toolCard/business-list/index"
-  }
-}

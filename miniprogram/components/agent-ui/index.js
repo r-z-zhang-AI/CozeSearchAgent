@@ -1,6 +1,6 @@
 // components/agent-ui/index.js
-import { checkConfig, randomSelectInitquestion, getCloudInstance, commonRequest, sleep } from "./tools";
-import md5 from "./md5.js";
+import { checkConfig, randomSelectInitquestion, getCloudInstance, commonRequest, sleep } from "../../utils/tools";
+import md5 from "../../utils/libs/md5.js";
 Component({
   properties: {
     chatMode: {

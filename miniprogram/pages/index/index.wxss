@@ -1,50 +1,52 @@
 page {
-  background-color: #fafbfc;
+  background-color: var(--bg-secondary);
 }
 
 .title {
-  color: #3498db;
-  font-size: 46px; /* 再增加4px */
-  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 92rpx;
+  font-weight: var(--font-semibold);
   text-align: center;
-  padding: 50px 0px 30px 0px;
+  padding: 100rpx 0 60rpx 0;
 }
 
 .sub-title {
-  color: #5a6c7d;
-  font-size: 24px; /* 再增加2px */
-  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: var(--font-lg);
+  font-weight: var(--font-normal);
   text-align: center;
-  line-height: 34px; /* 相应调整行高 */
+  line-height: 1.4;
 }
 
 .btn-box {
   display: flex;
   justify-content: center;
-  gap: 30rpx;
-  padding: 30px 0px;
+  gap: var(--space-md);
+  padding: 60rpx 0;
 }
 
 .btn-fill {
   width: 180rpx;
-  height: 40px;
-  border-radius: 8px;
-  line-height: 40px;
-  color: #fff;
-  background-color: #3498db;
+  height: 80rpx;
+  border-radius: var(--radius-sm);
+  line-height: 80rpx;
+  color: var(--bg-primary);
+  background-color: var(--primary-color);
   text-align: center;
-  box-shadow: 0 2rpx 8rpx rgba(52, 152, 219, 0.2);
+  box-shadow: var(--shadow-md);
+  font-weight: var(--font-medium);
 }
 
 .btn-light {
   width: 180rpx;
-  height: 40px;
-  border-radius: 8px;
-  line-height: 40px;
-  color: #3498db;
-  background-color: #FFF;
-  border: #3498db solid 1px;
+  height: 80rpx;
+  border-radius: var(--radius-sm);
+  line-height: 80rpx;
+  color: var(--primary-color);
+  background-color: var(--bg-primary);
+  border: 1rpx solid var(--primary-color);
   text-align: center;
+  font-weight: var(--font-medium);
 }
 
 .introduction-box {

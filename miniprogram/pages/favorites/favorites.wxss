@@ -1,100 +1,76 @@
 /* pages/favorites/favorites.wxss */
 page {
-  background-color: #fafbfc;
+  height: 100vh;
+  background-color: #f5f5f5;
+  overflow: hidden;
 }
 
 .favorites-container {
-  min-height: 100vh;
-  padding-top: 330rpx; /* 确保不与固定元素重叠 */
-}
-
-/* 顶部导航 */
-.nav-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 88rpx; /* 调整导航栏高度 */
-  background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
-  border-bottom: 1rpx solid rgba(102, 126, 234, 0.1);
+  height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24rpx;
-  z-index: 1000;
-  padding-top: 44rpx; /* 为状态栏留出空间 */
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.nav-back {
-  width: 60rpx;
-  height: 60rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 48rpx;
-  color: #666;
-}
-
-.nav-title {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.nav-placeholder {
-  width: 60rpx;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 搜索区域 */
 .search-section {
-  position: fixed;
-  top: 132rpx; /* 紧贴导航栏下方 */
-  left: 0;
-  right: 0;
-  padding: 16rpx 20rpx; /* 减少内边距 */
-  background: #fff;
-  border-bottom: 1rpx solid #f0f0f0;
-  z-index: 999;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  padding: 24rpx;
+  background: #ffffff;
+  margin-bottom: 20rpx;
+  flex-shrink: 0;
 }
 
 .search-box {
+  margin-bottom: 16rpx;
+}
+
+.search-input-wrapper {
+  position: relative;
   display: flex;
-  gap: 16rpx;
   align-items: center;
-  margin-bottom: 12rpx; /* 进一步减少间距 */
 }
 
 .search-input {
   flex: 1;
-  height: 64rpx;
-  border-radius: 32rpx;
-  background: #f8f9fa;
-  padding: 0 24rpx;
-  border: 1px solid #e3e8f0;
+  height: 72rpx;
+  border-radius: 20rpx;
+  background: #e7f0fa;
+  padding: 0 120rpx 0 24rpx;
+  border: 1px solid #7a9fbf;
   font-size: 28rpx;
-  color: #2c3e50;
+  color: #398ad1;
+}
+
+.search-input::-webkit-input-placeholder {
+  color: #e7f4fd;
+}
+
+.search-input::placeholder {
+  color: #e7f4fd;
 }
 
 .search-btn {
-  border-radius: 32rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: absolute;
+  right: 8rpx;
+  height: 72rpx;
+  border-radius: 8rpx;
+  background: #398ad1;
   color: #fff;
   border: none;
   font-size: 26rpx;
   font-weight: 500;
+  padding: 0 20rpx;
 }
 
 .tag-scroll {
   white-space: nowrap;
-  margin-bottom: 12rpx; /* 进一步减少间距 */
+  margin-bottom: 12rpx;
 }
 
 .tag {
   display: inline-block;
-  padding: 6rpx 16rpx; /* 进一步减少内边距 */
-  margin-right: 10rpx; /* 进一步减少右边距 */
+  padding: 6rpx 16rpx;
+  margin-right: 10rpx;
   border-radius: 32rpx;
   border: 1px solid #e3e8f0;
   color: #5a6c7d;
@@ -111,11 +87,11 @@ page {
 
 .sort-bar {
   display: flex;
-  gap: 10rpx; /* 进一步减少间距 */
+  gap: 10rpx;
 }
 
 .sort-item {
-  padding: 6rpx 16rpx; /* 进一步减少内边距 */
+  padding: 6rpx 16rpx;
   border-radius: 32rpx;
   border: 1px solid #e3e8f0;
   color: #5a6c7d;
@@ -162,23 +138,15 @@ page {
 .empty-desc {
   font-size: 24rpx;
   color: #999;
-  margin-bottom: 48rpx;
+  margin-bottom: 24rpx;
   line-height: 1.5;
-}
-
-.back-chat-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 24rpx;
-  padding: 24rpx 48rpx;
-  font-size: 28rpx;
 }
 
 /* 收藏列表 */
 .favorites-list {
-  height: calc(100vh - 100rpx);
-  padding: 24rpx;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 24rpx 24rpx;
 }
 
 .prof-card {

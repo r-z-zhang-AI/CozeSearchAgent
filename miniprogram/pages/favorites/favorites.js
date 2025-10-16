@@ -160,10 +160,5 @@ Page({
         wx.showToast({ title: '已复制', icon: 'success' });
       }
     });
-  },
-
-  // 返回聊天页面
-  backToChat: function() {
-    wx.navigateBack();
   }
 });

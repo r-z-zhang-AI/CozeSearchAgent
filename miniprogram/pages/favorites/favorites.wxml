@@ -1,17 +1,12 @@
 <!--pages/favorites/favorites.wxml-->
 <view class="favorites-container">
-  <!-- 顶部导航 -->
-  <view class="nav-header">
-    <view class="nav-back" bindtap="backToChat">‹</view>
-    <view class="nav-title">收藏的教授</view>
-    <view class="nav-placeholder"></view>
-  </view>
-
   <!-- 搜索和筛选区域 -->
   <view class="search-section">
     <view class="search-box">
-      <input class="search-input" placeholder="搜索姓名、学院、方向" confirm-type="search" bindconfirm="onSearch" bindinput="onInput" value="{{keyword}}"/>
-      <button class="search-btn" size="mini" bindtap="onSearch">搜索</button>
+      <view class="search-input-wrapper">
+        <input class="search-input" placeholder="搜索姓名、学院、方向" confirm-type="search" bindconfirm="onSearch" bindinput="onInput" value="{{keyword}}"/>
+        <button class="search-btn" size="mini" bindtap="onSearch" style="height: 53rpx; display: block; box-sizing: border-box; left: 600rpx; top: 11rpx">搜索</button>
+      </view>
     </view>
     <scroll-view class="tag-scroll" scroll-x>
       <view class="tag {{activeTag==='全部'?'active':''}}" data-tag="全部" bindtap="onTagTap">全部</view>
@@ -32,10 +27,9 @@
 
   <!-- 空状态 -->
   <view wx:elif="{{list.length === 0 && !loading}}" class="empty-container">
-    <image class="empty-icon" src="/images/star.svg" mode="aspectFit"/>
+    <image class="empty-icon" src="/assets/icons/star.svg" mode="aspectFit"/>
     <text class="empty-text">{{keyword || activeTag !== '全部' ? '没有找到匹配的教授' : '还没有收藏的教授'}}</text>
     <text class="empty-desc">{{keyword || activeTag !== '全部' ? '试试调整搜索条件' : '在聊天中点击教授卡片的收藏按钮即可收藏'}}</text>
-    <button class="back-chat-btn" bindtap="backToChat">返回聊天</button>
   </view>
 
   <!-- 收藏列表 -->
@@ -47,7 +41,7 @@
           <text class="prof-name">{{prof.name}}</text>
           <view class="prof-actions">
             <view class="action-btn share-btn" data-prof="{{prof}}" bindtap="shareProfessor">
-              <image class="action-icon" src="/images/share.svg" mode="aspectFit"/>
+              <image class="action-icon" src="/assets/icons/share.svg" mode="aspectFit"/>
             </view>
             <view class="action-btn remove-btn" data-id="{{prof.profId}}" bindtap="removeFavorite">
               <text class="remove-text">×</text>

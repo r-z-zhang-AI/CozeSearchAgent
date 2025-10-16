@@ -151,10 +151,6 @@
   box-sizing: border-box;
 }
 
-.foot_function {
-  /* margin: 0px 0px 15px; */
-}
-
 .footer .file_list {
   display: flex;
   flex-direction: row;
@@ -301,11 +297,11 @@
   /* background-color: #fff; */
   display: flex;
   align-items: center;
-  border: #f3f3f3 solid 1px;
+  border: #7a9fbf solid 1px;
   border-radius: 16px;
   /* box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2); */ 
   box-sizing: border-box;
-  background-color: #f3f4f6;
+  background-color: #8AAFCF;
 }
 
 .say_box {
@@ -320,6 +316,14 @@
   flex: 1;
   max-height: 160px;
   font-size: 16px;
+}
+
+.input::-webkit-input-placeholder {
+  color: #e7f4fd;
+}
+
+.input::placeholder {
+  color: #e7f4fd;
 }
 
 .say_btn {

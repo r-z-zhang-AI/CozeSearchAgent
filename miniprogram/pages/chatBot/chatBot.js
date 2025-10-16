@@ -30,6 +30,17 @@ Page({
      multiSelectMode: false,
      selectedMessagesCount: 0,
      showSharePanel: false,
+     // 联系我们弹窗
+    showContactUs: false,
+  // 联系我们图片控制（优先本地，失败则回退远程）
+  // 使用根路径 `/assets/icons/...` 指向 miniprogram/images 下的资源，避免被解析为 /pages/assets/icons/...
+  contactImageSrc: '/assets/icons/contact-us.jpg',
+    contactImageLoadState: 'idle', // idle | loading | loaded | error
+    // 侧边栏折叠状态
+    conversationsCollapsed: false,
+    favoritesCollapsed: false,
+    // 收藏数据
+    favoritesList: []
   },
   onFabChange: function(e){
     const detail = e.detail || {};
@@ -73,6 +84,8 @@ Page({
       
       // 加载当前用户的会话列表
       this.loadUserConversations();
+      // 加载收藏列表
+      this.loadFavoritesList();
     } catch (err) {
       console.error('页面加载失败:', err);
     }
@@ -299,45 +312,8 @@ Page({
   },
 
   // 用户管理界面控制 
-  toggleUserManager: function() {
-    this.setData({ showUserManager: !this.data.showUserManager });
-  },
-
   hideUserManager: function() {
     this.setData({ showUserManager: false });
-  },
-
-  createNewUser: function() {
-    try {
-      const newUserId = userManager.createUser();
-      const userList = userManager.getUserList();
-      
-      this.setData({ 
-        currentUserId: newUserId,
-        currentUserDisplayName: userManager.getUserDisplayName(newUserId),
-        userList: userList.map(id => ({
-          id,
-          displayName: userManager.getUserDisplayName(id),
-          isCurrent: id === newUserId
-        })),
-        showUserManager: false
-      });
-      
-      // 加载新用户的会话数据（为空）
-      this.loadUserConversations();
-      
-      wx.showToast({
-        title: '新用户创建成功',
-        icon: 'success',
-        duration: 1500
-      });
-    } catch (e) {
-      console.error('创建用户失败:', e);
-      wx.showToast({
-        title: '创建失败',
-        icon: 'error'
-      });
-    }
   },
 
   deleteCurrentUser: function() {
@@ -398,6 +374,53 @@ Page({
   // 阻止事件冒泡
   stopPropagation: function(e){
     // 阻止事件冒泡
+  },
+
+  // 联系我们弹窗控制
+  showContactUs: function() {
+    // 打开弹窗时优先使用本地图片，并进入 loading 状态
+    this.setData({ 
+      showContactUs: true,
+      sidebarOpen: false, // 关闭侧边栏
+      contactImageSrc: '/assets/icons/contact-us.jpg',
+      contactImageLoadState: 'loading' // 确保状态更新
+    });
+    console.log('联系我们弹窗已打开，图片加载中...', '/assets/icons/contact-us.jpg');
+  },
+
+  hideContactUs: function() {
+    this.setData({ showContactUs: false });
+  },
+
+  // 收藏相关方法
+  loadFavoritesList: function() {
+    try {
+      const favorites = wx.getStorageSync('favorites') || [];
+      // 只显示前5个收藏，避免列表过长
+      const displayFavorites = favorites.slice(0, 5).map(prof => ({
+        profId: prof.profId,
+        name: prof.name,
+        school: prof.school
+      }));
+      this.setData({ favoritesList: displayFavorites });
+    } catch (error) {
+      console.error('加载收藏列表失败:', error);
+    }
+  },
+
+  // 切换折叠状态
+  toggleConversationsCollapse: function() {
+    this.setData({ conversationsCollapsed: !this.data.conversationsCollapsed });
+  },
+
+  toggleFavoritesCollapse: function() {
+    this.setData({ favoritesCollapsed: !this.data.favoritesCollapsed });
+  },
+
+  // 跳转到收藏页面
+  goToFavoritesPage: function() {
+    this.setData({ sidebarOpen: false });
+    wx.navigateTo({ url: '/pages/favorites/favorites' });
   },
   loadConversation: function(cid){
     try {
@@ -493,13 +516,15 @@ Page({
     this.callCozeWorkflow(input).then(function(result) {
       // 立即清理所有loading消息，并在清理完成后添加助手回复
       self.clearAllLoadingMessages(function() {
-        console.log('处理返回结果:', result);
+        console.log('🔍 处理返回结果:', result);
+        // console.log('📋 card_data 内容:', result ? result.card_data : 'undefined');
         
         // 检查是否有教授卡片数据
         if (result && result.card_data && 
             result.card_data.type === 'professor_list' && 
             result.card_data.professors && 
             result.card_data.professors.length > 0) {
+          console.log('✅ 检测到教授卡片数据，教授数量:', result.card_data.professors.length);
           // 宽泛问题：只显示简洁提示语和教授卡片
           self.addMessage({
             type: 'assistant',
@@ -507,6 +532,10 @@ Page({
             cardData: result.card_data,
           });
         } else if (result && result.response_text && result.response_text.trim()) {
+          console.log('ℹ️ 未检测到有效教授卡片数据，显示文本回复');
+          if (result.card_data) {
+            console.log('⚠️ card_data 存在但不符合条件:', result.card_data);
+          }
           // 详细询问或其他情况：显示自然语言回复
           self.addMessage({
             type: 'assistant',
@@ -571,10 +600,15 @@ Page({
     
     return wx.cloud.callFunction({
       name: 'coze_workflow',
+      config: {
+        // 将客户端超时时间设置为 1200 秒 (1200000 毫秒)
+        timeout: 1200000
+      },
       data: {
         input: userInput,
         bot_id: bot_id,
         conversation_id: conversation_id,
+        mode: 'fast', // 使用快速模式，避免同步调用超时
         user_id: 'miniprogram_user', // 小程序用户标识
       }
     }).then(function(res) {
@@ -599,7 +633,16 @@ Page({
       if (r.code !== 0) {
         const errorMsg = r.message || r.msg || '未知错误';
         console.error('❌ 扣子智能体返回错误:', r);
-        throw new Error(`智能体调用失败: ${errorMsg}`);
+        
+        // 根据错误类型提供更友好的错误信息
+        let userFriendlyMsg = '智能体暂时不可用，请稍后重试';
+        if (errorMsg.includes('余额') || errorMsg.includes('quota')) {
+          userFriendlyMsg = '服务暂时不可用，请稍后重试';
+        } else if (errorMsg.includes('超时') || errorMsg.includes('timeout')) {
+          userFriendlyMsg = '请求超时，请稍后重试';
+        }
+        
+        throw new Error(userFriendlyMsg);
       }
       
       const d = r.data;
@@ -623,6 +666,10 @@ Page({
       };
     }).catch(function(error) {
       console.error('💥 扣子智能体调用异常:', error);
+      // 如果是超时错误，给出更友好的提示并尝试降级处理
+      if (error && error.errMsg && error.errMsg.includes('Invoking task timed out')) {
+        console.error('检测到云函数调用超时（60s），建议使用 fast 模式或将部分处理改为异步');
+      }
       throw error;
     });
   },
@@ -728,7 +775,7 @@ Page({
       } else {
         clearInterval(progressInterval);
       }
-    }, 100); // 每100ms更新一次
+    }, 700); // 每100ms更新一次
     
     // 存储interval用于清理
     if (!this.progressIntervals) {
@@ -783,7 +830,10 @@ Page({
   /**
    * 生命周期函数--监听页面显示
    */
-  onShow: function() {},
+  onShow: function() {
+    // 重新加载收藏列表，以防从收藏页面返回后数据有变化
+    this.loadFavoritesList();
+  },
 
   /**
    * 生命周期函数--监听页面隐藏
@@ -1189,6 +1239,32 @@ Page({
       return Math.floor(diff / 86400000) + '天前';
     } else {
       return date.toLocaleDateString();
+    }
+  },
+
+  // 联系我们图片加载成功
+  onContactImageLoad: function(e) {
+    // 标记为已加载并打印当前 src，部分环境下 load 事件的 e 为空或只包含小量信息
+    this.setData({ contactImageLoadState: 'loaded' });
+    const currentSrc = this.data.contactImageSrc || '';
+    console.log('图片加载成功，当前图片路径:', currentSrc, 'event:', e && e.type ? e.type : e);
+  },
+
+  // 联系我们图片加载失败 -> 回退逻辑
+  onContactImageError: function(e) {
+    const current = this.data.contactImageSrc || '';
+    console.log('图片加载失败，当前图片路径:', current);
+    if (current && current.indexOf('images/contact-us.jpg') !== -1) {
+      // 本地失败，回退到远程并加入时间戳以防止缓存问题
+      const remote = 'https://r-z-zhang-ai.github.io/FINANCE/connect-us.jpg?t=' + Date.now();
+      this.setData({ contactImageSrc: remote, contactImageLoadState: 'loading' });
+      console.log('尝试加载远程图片（带cache-bust）:', remote);
+    } else if (current && current.indexOf('r-z-zhang-ai.github.io') !== -1) {
+      this.setData({ contactImageLoadState: 'error' });
+      console.log('远程图片加载失败，显示占位内容。');
+    } else {
+      this.setData({ contactImageLoadState: 'error' });
+      console.log('未知图片路径，显示占位内容。');
     }
   },
 

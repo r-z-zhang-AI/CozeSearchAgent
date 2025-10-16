@@ -5,11 +5,11 @@
   <view class="drawer {{isDrawerShow ? 'show' : ''}}">
     <view class="drawer-header">
       <view class="create-new-chat" bind:tap="clickCreateInDrawer">
-        <image style="width: 48rpx;height: 48rpx;margin-right: 10rpx" src="./imgs/chat-add.svg" mode="aspectFill"/>
+        <image style="width: 48rpx;height: 48rpx;margin-right: 10rpx" src="/assets/icons/chat-add.svg" mode="aspectFill"/>
         <text> 开启新对话 </text>
       </view>
       <!-- <text>会话记录</text> -->
-      <image class="close-icon" src="./imgs/indent-left.svg" bindtap="closeDrawer"/>
+      <image class="close-icon" src="/assets/icons/indent-left.svg" bindtap="closeDrawer"/>
     </view>
     <!-- <view class="drawer-content"> -->
     <view class="drawer-content">
@@ -38,7 +38,7 @@
       </block>
       <block wx:else>
         <view style="width: 100%;height: 100%;display: flex;flex-direction: column;justify-content: center;align-items: center;">      
-          <image src="./imgs/chat-bubble-history.svg" mode="aspectFill" style="width: 100rpx;height: 100rpx;transform: translateY(-50%);"/>
+          <image src="/assets/icons/chat-bubble-history.svg" mode="aspectFill" style="width: 100rpx;height: 100rpx;transform: translateY(-50%);"/>
           <text style="color: rgb(160, 160, 160)">暂无历史记录</text>
         </view>
       </block>
@@ -49,10 +49,10 @@
   </view>
   <view class="navBar {{showBotName ? 'showBotName' : 'hiddenBotName'}}" wx:if="{{chatMode === 'bot'}}">
     <view class="nav-content {{showBotName ? 'showBotName' : 'hiddenBotName'}}" style="{{showMultiConversation ? 'justify-content: space-between;' : ''}}">
-      <image wx:if="{{bot.botId && showMultiConversation}}" bind:tap="openDrawer" class="con-icon" src="./imgs/indent-right.svg" mode="aspectFill"/>
+      <image wx:if="{{bot.botId && showMultiConversation}}" bind:tap="openDrawer" class="con-icon" src="/assets/icons/indent-right.svg" mode="aspectFill"/>
       <!-- <image src="{{bot.avatar}}" mode="aspectFill" class="bot-avatar"/> -->
       <text wx:if="{{showBotName}}" class="bot-name">{{bot.name}}</text>
-      <image wx:if="{{bot.botId && showMultiConversation}}" class="con-icon" bind:tap="createNewConversation" src="./imgs/chat-bubble-add.svg" mode="aspectFill"/>
+      <image wx:if="{{bot.botId && showMultiConversation}}" class="con-icon" bind:tap="createNewConversation" src="/assets/icons/chat-bubble-add.svg" mode="aspectFill"/>
     </view>
   </view>
   <view style="height: 100%;overflow: auto;position: relative;"> 
@@ -77,7 +77,7 @@
               <!-- 最后一条消息，并且是发送状态显示发送中 -->
               <block wx:if="{{(chatRecords.length-1)===index&&chatStatus===1}}">
                 <view style="display: flex;align-items: center; gap: 4px; font-size: 32rpx;line-height: 1.8;">
-                  <image src="./imgs/loading.svg" mode="aspectFill" style="width: 14px;height: 14px;" /> 请稍等，正在卖力思考中 🤔
+                  <image src="/assets/icons/loading.svg" mode="aspectFill" style="width: 14px;height: 14px;" /> 请稍等，正在卖力思考中 🤔
                 </view>
               </block>
               <block wx:else>
@@ -88,7 +88,7 @@
                 <!-- 联网搜索 -->
                 <FoldedCard wx:if="{{item.search_info && item.search_info.search_results}}" initStatus="{{false}}" showBgColor="{{true}}">
                   <view slot="title" style="opacity: 0.7;font-size: 14px;display: flex; align-items: center; gap: 8px;">
-                    <image src="./imgs/search.svg" mode="aspectFill" style="width: 36rpx;height: 36rpx;" />
+                    <image src="/assets/icons/search.svg" mode="aspectFill" style="width: 36rpx;height: 36rpx;" />
                     <text>已参考 {{item.search_info.search_results.length}} 个网页</text>
                   </view>
                   <view slot="content" class="link-box">
@@ -104,7 +104,7 @@
                 <!-- 推理过程 -->
                 <FoldedCard wx:if="{{!!item.reasoning_content}}" initStatus="{{true}}" showBgColor="{{false}}">
                   <view slot="title" style="opacity: 0.7;font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                    <image src="./imgs/system-sum.svg" mode="aspectFill" style="width: 36rpx;height: 36rpx;" />
+                    <image src="/assets/icons/system-sum.svg" mode="aspectFill" style="width: 36rpx;height: 36rpx;" />
                     <block wx:if="{{item.pauseThinking}}">
                       已停止思考
                     </block>
@@ -126,9 +126,9 @@
                       <view slot="title" style="opacity: 0.7;font-size: 14px; display: flex; align-items: center; gap: 8px;">
                         <block>
                         调用工具 {{subItem.name}}
-                        <image wx:if="{{!subItem.callResult && !subItem.error}}" src="./imgs/loading.svg" mode="aspectFill" style="width: 14px;height: 14px;" />
-                        <image wx:if="{{subItem.callResult}}" mode="widthFix" src='./imgs/check.svg' style="width: 36rpx; height: 36rpx;vertical-align: top;" bind:tap="share" />
-                        <image wx:if="{{subItem.error}}" mode="widthFix" src='./imgs/close-red.svg' style="width: 36rpx; height: 36rpx;vertical-align: top;" bind:tap="share" />
+                        <image wx:if="{{!subItem.callResult && !subItem.error}}" src="/assets/icons/loading.svg" mode="aspectFill" style="width: 14px;height: 14px;" />
+                        <image wx:if="{{subItem.callResult}}" mode="widthFix" src='/assets/icons/check.svg' style="width: 36rpx; height: 36rpx;vertical-align: top;" bind:tap="share" />
+                        <image wx:if="{{subItem.error}}" mode="widthFix" src='/assets/icons/close-red.svg' style="width: 36rpx; height: 36rpx;vertical-align: top;" bind:tap="share" />
                         </block>
                         <!-- <block wx:else>
                           <text>{{item.reasoning_content&&!item.content?"思考中...":"已深度思考（用时"+item.thinkingTime+"秒）"}}</text>
@@ -148,20 +148,20 @@
                 <markdownPreview markdown="{{item.content||''}}"></markdownPreview>
                 <!-- 下面的按钮 -->
                 <view style="display: flex; gap: 10px;justify-content: flex;" wx:if="{{!item.hiddenBtnGround}}">
-                  <image wx:if="{{item.error}}" mode="widthFix" bind:tap="showErrorMsg" src='./imgs/error-circle.svg' class="tool_btn" data-content="{{item.error}}" data-reqid="{{item.reqId}}"/>
-                  <image mode="widthFix" bind:tap="copyChatRecord" src='./imgs/copy.svg' class="tool_btn" data-content="{{item.content}}" />
+                  <image wx:if="{{item.error}}" mode="widthFix" bind:tap="showErrorMsg" src='/assets/icons/error-circle.svg' class="tool_btn" data-content="{{item.error}}" data-reqid="{{item.reqId}}"/>
+                  <image mode="widthFix" bind:tap="copyChatRecord" src='/assets/icons/copy.svg' class="tool_btn" data-content="{{item.content}}" />
                   <block wx:if="{{!item.error}}">                
                     <button class="share_btn" open-type="share">
-                    <image mode="widthFix" src='./imgs/share.svg' class="tool_btn" style="vertical-align: top;" bind:tap="share" />
+                    <image mode="widthFix" src='/assets/icons/share.svg' class="tool_btn" style="vertical-align: top;" bind:tap="share" />
                     </button>
                     <block wx:if="{{chatMode=== 'bot'}}">
-                      <image mode="widthFix" bind:tap="openFeedback" data-feedbackType="upvote" data-feedbackRecordId="{{item.record_id}}" src='./imgs/thumb-up.svg' class="tool_btn" />
-                      <image mode="widthFix" bind:tap="openFeedback" data-feedbackType="downvote" data-feedbackRecordId="{{item.record_id}}" src='./imgs/thumb-down.svg' class="tool_btn" />
-                      <image wx:if="{{audioContext.recordId !== item.record_id || audioContext.playStatus === 0}}" mode="widthFix" bind:tap="handlePlayAudio" data-content="{{item.content}}" data-recordId="{{item.record_id}}" src='./imgs/sound.svg' class="tool_btn" />
-                      <image wx:elif="{{audioContext.playStatus === 1}}" mode="widthFix"  src='./imgs/loading.svg' class="tool_btn" />
+                      <image mode="widthFix" bind:tap="openFeedback" data-feedbackType="upvote" data-feedbackRecordId="{{item.record_id}}" src='/assets/icons/thumb-up.svg' class="tool_btn" />
+                      <image mode="widthFix" bind:tap="openFeedback" data-feedbackType="downvote" data-feedbackRecordId="{{item.record_id}}" src='/assets/icons/thumb-down.svg' class="tool_btn" />
+                      <image wx:if="{{audioContext.recordId !== item.record_id || audioContext.playStatus === 0}}" mode="widthFix" bind:tap="handlePlayAudio" data-content="{{item.content}}" data-recordId="{{item.record_id}}" src='/assets/icons/sound.svg' class="tool_btn" />
+                      <image wx:elif="{{audioContext.playStatus === 1}}" mode="widthFix"  src='/assets/icons/loading.svg' class="tool_btn" />
                       <view wx:else class="playing_btn">
-                        <image style="width: 36rpx;height: 36rpx;"  mode="widthFix" bind:tap="handlePauseAudio" data-recordId="{{item.record_id}}" src='./imgs/pause.svg' />
-                        <image style="width: 30rpx;height: 30rpx" src="./imgs/playing.svg" mode="widthFix"/>
+                        <image style="width: 36rpx;height: 36rpx;"  mode="widthFix" bind:tap="handlePauseAudio" data-recordId="{{item.record_id}}" src='/assets/icons/pause.svg' />
+                        <image style="width: 30rpx;height: 30rpx" src="/assets/icons/playing.svg" mode="widthFix"/>
                           <!-- 倍速切换按钮 -->
                           <view class="speed-switch" bindtap="toggleSpeedList" data-recordId="{{item.record_id}}">
                             
@@ -171,14 +171,14 @@
                           <view wx:if="{{audioContext.showSpeedList && audioContext.recordId === item.record_id}}" class="speed-popup">
                             <view wx:for="{{speedList}}" wx:key="item" class="speed-option" bindtap="chooseSpeed" data-speed="{{item}}" data-recordId="{{item.record_id}}">
                               <text>{{item}}X</text>
-                              <image wx:if="{{audioContext.currentSpeed === item}}" src="./imgs/check.svg" style="width: 24rpx;height: 24rpx;margin-left:8rpx;" />
+                              <image wx:if="{{audioContext.currentSpeed === item}}" src="/assets/icons/check.svg" style="width: 24rpx;height: 24rpx;margin-left:8rpx;" />
                             </view>
                           </view>
                       </view>
                     </block>
                   </block>
                 </view>
-                <image  wx:if="{{(chatRecords.length - 1) === index && (chatStatus === 2 || chatStatus === 3)}}" mode="widthFix"  src='./imgs/loading.svg' style="width: 14px;height: 14px;" />
+                <image  wx:if="{{(chatRecords.length - 1) === index && (chatStatus === 2 || chatStatus === 3)}}" mode="widthFix"  src='/assets/icons/loading.svg' style="width: 14px;height: 14px;" />
               </block>
             </view>
           </view>
@@ -190,11 +190,11 @@
               <!-- 长按菜单 -->
               <view class="operation-menu" wx:if="{{showMenu && tapMenuRecordId === item.record_id}}">
                 <view class="menu-item" bind:tap="handleCopyAll" data-content="{{item.content}}">
-                  <image src="./imgs/copy.svg" class="menu-icon" />
+                  <image src="/assets/icons/copy.svg" class="menu-icon" />
                   <text>复制全文</text>
                 </view>
                 <view class="menu-item" bind:tap="handleEdit" data-content="{{item.content}}">
-                  <image src="./imgs/edit.svg" class="menu-icon" />
+                  <image src="/assets/icons/edit.svg" class="menu-icon" />
                   <text>修改</text>
                 </view>
               </view>
@@ -214,13 +214,13 @@
       </view>
       <view id="scroll-bottom" style="width: 100%;height: 20px;"></view>
     </scroll-view>
-    <image bind:tap="autoToBottom" wx:if="{{manualScroll}}" style="width:28px;height:28px;border-radius: 50px;position: absolute;bottom:150px;right: 20px;padding: 5px;background-color: white;box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;" src="./imgs/toBottom.svg" mode="aspectFit" binderror="" bindload="" />
+    <image bind:tap="autoToBottom" wx:if="{{manualScroll}}" style="width:28px;height:28px;border-radius: 50px;position: absolute;bottom:150px;right: 20px;padding: 5px;background-color: white;box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;" src="/assets/icons/toBottom.svg" mode="aspectFit" binderror="" bindload="" />
   </view>
   <!-- 底部输入区 -->
   <view class="footer">
     <view class="{{ showFileList ? 'no_feature_list' : 'feature_list'}}" wx:if="{{showFeatureList}}">
       <view bind:tap="handleClickWebSearch" class="{{'webSearchSwitch ' + (useWebSearch ? 'feature_enable' : '')}}">
-        <image src="{{ useWebSearch ? './imgs/internetUse.svg' : './imgs/internet.svg'}}" mode="" style="width: 40rpx;height:30px;margin-right: 10rpx;" />
+        <image src="{{ useWebSearch ? '/assets/icons/internetUse.svg' : '/assets/icons/internet.svg'}}" mode="" style="width: 40rpx;height:30px;margin-right: 10rpx;" />
         <text style="color: {{useWebSearch ? 'rgb(77, 107, 254)' : 'rgb(95, 114, 146)'}}">联网搜索</text>
       </view>
     </view>
@@ -230,8 +230,8 @@
     <view class="foot_function">
       <view class="input_box">
         <view class="left_btns" wx:if="{{showVoice}}">
-          <image wx:if="{{!useVoice}}" src="./imgs/voice.svg" class="set" mode="widthFix" bind:tap="handleChangeInputType" />
-          <image wx:else src="./imgs/keyboard.svg" class="set" mode="widthFix" bind:tap="handleChangeInputType" />
+          <image wx:if="{{!useVoice}}" src="/assets/icons/voice.svg" class="set" mode="widthFix" bind:tap="handleChangeInputType" />
+          <image wx:else src="/assets/icons/keyboard.svg" class="set" mode="widthFix" bind:tap="handleChangeInputType" />
         </view>
         <view hidden="{{useVoice}}" class="input_inner_box">
           <textarea  class="input" value="{{inputValue}}" maxlength="1024" bindfocus="bindInputFocus" bindinput="bindKeyInput" placeholder="说点什么吧" bindconfirm="handleSendMessage" confirm-type="send" adjust-position cursor-spacing="40" auto-height="{{true}}" show-confirm-bar="{{false}}" bindlinechange="handleLineChange" />
@@ -240,36 +240,36 @@
         <view hidden="{{!useVoice}}" bindtouchstart="handleTouchStart"  bindtouchmove="handleTouchMove" bindtouchend="handleTouchEnd" class="input_inner_box" style="position: absolute;width: calc(100% - 136rpx);left: 50%;transform: translateX(-50%);opacity: 0;">
         </view>
         <view hidden="{{!useVoice}}" class="input_inner_box say_box" style="background-color: {{sendStatus === 1 ? '#e9f6ef' : (sendStatus === 2 ? '#f8ecea' : '')}};"><text wx:if="{{!longPressTriggered}}">{{voiceRecognizing ? '识别中' : '按住 说话'}}</text>
-          <image wx:else src="{{ sendStatus === 1 ? './imgs/sendSaying.svg' : (sendStatus === 2 ? './imgs/cancelSaying.svg' : '')}}" class="set" mode="widthFix" />
+          <image wx:else src="{{ sendStatus === 1 ? '/assets/icons/sendSaying.svg' : (sendStatus === 2 ? '/assets/icons/cancelSaying.svg' : '')}}" class="set" mode="widthFix" />
         </view>
         <view class="right_btns">
           <!-- 加号 -->
-          <image src="./imgs/set.svg" class="set" mode="widthFix" bind:tap="handleClickTools" />
+          <image src="/assets/icons/set.svg" class="set" mode="widthFix" bind:tap="handleClickTools" />
           <!-- 发送按钮 -->
           <view wx:if="{{!!inputValue&&chatStatus===0}}" class="set" style="display: flex;justify-content: center;align-items: center;background-color: #436af4;border-radius: 50px;">
-            <image src="/home/rzzhang/project/SearchAgent/SearchAgent/miniprogram/images/send.svg" class="send-set" mode="widthFix" bind:tap="handleSendMessage" style="transform-origin: 8px 8px;" />
+            <image src="/assets/icons/send.svg" class="send-set" mode="widthFix" bind:tap="handleSendMessage" style="transform-origin: 8px 8px;" />
           </view>
           <!-- 暂停按钮 -->
-          <image src="./imgs/stop.svg" class="set" mode="widthFix" wx:if="{{!(chatStatus===0)}}" bind:tap="stop" />
+          <image src="/assets/icons/stop.svg" class="set" mode="widthFix" wx:if="{{!(chatStatus===0)}}" bind:tap="stop" />
         </view>
       </view>
     </view>
     <!-- 底部工具栏 -->
     <view class="tool_box" wx:if="{{showTools}}">
       <view class="function" bind:tap="handleTapClear">
-        <image src="./imgs/clear.svg" alt="widthFix" class="icon" />
+        <image src="/assets/icons/clear.svg" alt="widthFix" class="icon" />
         <text class="text_desc">清除</text>
       </view>
       <view wx:if="{{showUploadFile && chatMode === 'bot'}}" class="function" bind:tap="handleUploadMessageFile">
-        <image src="./imgs/wechat.svg" alt="widthFix" class="icon" />
+        <image src="/assets/icons/wechat.svg" alt="widthFix" class="icon" />
         <text class="text_desc">微信文件</text>
       </view>
       <view wx:if="{{showUploadImg && chatMode === 'bot'}}" class="function" bind:tap="handleAlbum">
-        <image src="./imgs/uploadImg.svg" alt="widthFix" class="icon" />
+        <image src="/assets/icons/uploadImg.svg" alt="widthFix" class="icon" />
         <text class="text_desc">图片</text>
       </view>
       <view wx:if="{{showUploadImg && chatMode === 'bot'}}" class="function" bind:tap="handleCamera">
-        <image src="./imgs/camera.svg" alt="widthFix" class="icon" />
+        <image src="/assets/icons/camera.svg" alt="widthFix" class="icon" />
         <text class="text_desc">相机</text>
       </view>
     </view>

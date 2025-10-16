@@ -1,6 +1,6 @@
 {
   "usingComponents": {
-    "custom-professor-list": "/components/toolCard/professor-list/index"
+    "custom-professor-list": "/components/tools/professor-list/index"
   },
   "enablePullDownRefresh": true,
   "navigationStyle": "custom"
