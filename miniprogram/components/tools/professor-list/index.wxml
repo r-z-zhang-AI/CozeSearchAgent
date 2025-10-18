@@ -14,9 +14,9 @@
       <!-- 教授姓名和匹配度 -->
       <view class="prof-header {{readOnly ? 'read-only' : ''}}">
         <text class="prof-name">{{prof.name}}</text>
-        <!-- 优先显示matchScore，如果没有再显示displayScore -->
-        <view class="match-score" wx:if="{{prof.matchScore >= 0 || prof.displayScore >= 0}}">
-          <text class="score-text">匹配度{{prof.matchScore !== undefined && prof.matchScore !== null ? prof.matchScore : prof.displayScore}}%</text>
+        <!-- 优先显示score，如果没有再显示displayScore -->
+        <view class="match-score" wx:if="{{prof.score >= 0 || prof.displayScore >= 0}}">
+          <text class="score-text">匹配度{{prof.score !== undefined && prof.score !== null ? prof.score : prof.displayScore}}%</text>
         </view>
       </view>
 

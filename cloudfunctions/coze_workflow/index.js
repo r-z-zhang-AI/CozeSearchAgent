@@ -1161,9 +1161,14 @@ function processChatStream(stream) {
 
 exports.main = async (event) => {
   const log = (message) => { console.log(`[coze_workflow] ${message}`); };
-  const COZE_TOKEN = "sat_7uH9hLHtR5NMpYs0EbJoe9Y7ief6HMACZZZepgjuJrRInNic6eKsDQu2vHEsX0kP";
-  const COZE_BOT_ID = "7560889707228495935";
-  const COZE_USER_ID = "miniprogram_user";
+  const COZE_TOKEN = process.env.COZE_TOKEN;
+  const COZE_BOT_ID = process.env.COZE_BOT_ID;
+  const COZE_USER_ID = process.env.COZE_USER_ID;
+
+  if (!COZE_TOKEN || !COZE_BOT_ID || !COZE_USER_ID) {
+    log('internal error: COZE_TOKEN, COZE_BOT_ID, or COZE_USER_ID is not set');
+    return { code: 500, message: 'internal error' };
+  }
 
   const input = event?.input || '';
   let conversation_id = event?.conversation_id || '';
@@ -1204,7 +1209,13 @@ exports.main = async (event) => {
 
   const stream = response.data;
 
-  return processChatStream(stream);
+  const result = await processChatStream(stream);
+
+  if (!result) {
+    return { code: 500, message: 'internal error' };
+  }
+
+  return { code: 0, data: result };
 
   try {
     // ----------------------------------------------------------------
