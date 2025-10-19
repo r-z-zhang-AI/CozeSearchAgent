@@ -1084,29 +1084,138 @@ function cleanResponseText(text, cardData) {
   return cleanedText.trim();
 }
 
+function processChatStream(stream) {
+  const log = (message) => { console.log(`[processChatStream] ${message}`); };
+  return new Promise((resolve, _) => {
+    let eventBuffer = 
+
+    stream.on('error', (err) => {
+      log(`Stream error: ${err.message}`);
+      resolve(null);
+    });
+
+    stream.on('end', () => {
+      // 流被中断
+      log('Stream ended.');
+      resolve(null);
+    });
+
+    const takeEvent = () => {
+      let boundary = eventBuffer.indexOf('\n\n');
+      if (boundary === -1) return null;
+      const eventBlock = eventBuffer.substring(0, boundary);
+      eventBuffer = eventBuffer.substring(boundary + 2);
+
+      // parse event block
+      let eventName = null;
+      let eventData = "";
+      const lines = eventBlock.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('event:')) {
+          eventName = line.substring('event:'.length).trim();
+        }
+        if (line.startsWith('data:')) {
+          eventData += line.substring('data:'.length);
+        }
+      }
+      if (!eventName || !eventData) return null;
+      return { eventName, eventData };
+    };
+
+    const processEvent = (eventName, eventData) => {
+      switch (eventName) {
+        // completed
+        case 'conversation.message.completed':
+          let data = JSON.parse(eventData);
+          log(`conversation.message.completed, data: ${JSON.stringify(data)}`);
+          if (data.type != 'answer') break;
+          resolve(data.content);
+          break;
+        // ignored
+        case 'conversation.chat.completed': break;
+        case 'done': break;
+        case 'conversation.chat.created': break;
+        case 'conversation.message.delta': break;
+        case 'conversation.chat.in_progress': break;
+        // unknown event
+        default: 
+          log(`unknown event: ${eventName}, data: ${eventData}`);
+          resolve(null);
+          break;
+      }
+    };
+
+    stream.on('data', (chunk) => {
+      const deltaString = chunk.toString();
+      eventBuffer += deltaString;
+
+      while (true) {
+        const event = takeEvent();
+        if (!event) break;
+        const { eventName, eventData } = event;
+        processEvent(eventName, eventData);
+      }
+    });
+  });
+}
+
 exports.main = async (event) => {
-  const startTime = Date.now();
-  const { input = '', bot_id = '7537877620181041204', conversation_id = '', user_id = 'miniprogram_user' } = event;
+  const log = (message) => { console.log(`[coze_workflow] ${message}`); };
+  const COZE_TOKEN = process.env.COZE_TOKEN;
+  const COZE_BOT_ID = process.env.COZE_BOT_ID;
+  const COZE_USER_ID = process.env.COZE_USER_ID;
+
+  if (!COZE_TOKEN || !COZE_BOT_ID || !COZE_USER_ID) {
+    log('internal error: COZE_TOKEN, COZE_BOT_ID, or COZE_USER_ID is not set');
+    return { code: 500, message: 'internal error' };
+  }
+
+  const input = event?.input || '';
+  let conversation_id = event?.conversation_id || '';
 
   if (!input) {
     return { code: 400, message: 'input is required' };
   }
 
-  const COZE_TOKEN = process.env.COZE_TOKEN;
-  if (!COZE_TOKEN) {
-    console.error('COZE_TOKEN 环境变量未配置');
-    return { code: 500, message: 'Server configuration error' };
+  const headers = {
+    Authorization: `Bearer ${COZE_TOKEN}`,
+    'Content-Type': 'application/json'
+  };
+
+  const url = "https://api.coze.cn/v3/chat";
+  if (typeof conversation_id === 'string' && conversation_id.length > 0) {
+    url += `?conversation_id=${conversation_id}`;
   }
 
-  const apiConfig = {
-    bot_id,
-    user_id,
-    headers: {
-      Authorization: `Bearer ${COZE_TOKEN}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    }
+  const body = {
+    bot_id: COZE_BOT_ID,
+    user_id: COZE_USER_ID,
+    stream: true,
+    additional_messages: [
+      {
+        role: "user",
+        content: input,
+        content_type: "text"
+      }
+    ]
   };
+
+  const response = await axios.post(
+    url, body, { 
+      headers,
+      responseType: 'stream'
+    }
+  );
+
+  const stream = response.data;
+
+  const result = await processChatStream(stream);
+
+  if (!result) {
+    return { code: 500, message: 'internal error' };
+  }
+
+  return { code: 0, data: result };
 
   try {
     // ----------------------------------------------------------------

@@ -192,7 +192,7 @@ Page({
   // 直接创建新会话，不弹窗
   createNewConversation: function(){
     this.hideAllDeleteOptions();
-    const cid = 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const cid = 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
     const conv = { conversationId: cid, title: '新对话', lastMsg: '', updatedAt: Date.now() };
     const list = [conv].concat(this.data.conversations || []);
     
@@ -431,7 +431,7 @@ Page({
       const messages = rawMessages.map((msg, index) => {
         if (!msg.id) {
           // 为没有ID的历史消息生成唯一ID
-          msg.id = 'm_legacy_' + Date.now() + '_' + index + '_' + Math.random().toString(36).substr(2, 6);
+          msg.id = 'm_legacy_' + Date.now() + '_' + index + '_' + Math.random().toString(36).substring(2, 8);
         }
         // 确保消息有正确的类型
         if (!msg.type) {
@@ -488,6 +488,7 @@ Page({
 
   // 发送消息
   onSend: function() {
+    const log = (message) => { console.log(`[onSend] ${message}`); };
     const input = this.data.inputValue.trim();
     if (!input || this.data.sending) return;
 
@@ -510,173 +511,109 @@ Page({
     // 启动进度动画
     this.startProgressAnimation(loadingMsgId);
 
-    const self = this;
-    
-    // 调用扣子工作流
-    this.callCozeWorkflow(input).then(function(result) {
+    return (async () => {
+      let result = await this.callCozeWorkflow(input);
+      log(`处理返回结果: ${JSON.stringify(result)}`);
+      
       // 立即清理所有loading消息，并在清理完成后添加助手回复
-      self.clearAllLoadingMessages(function() {
-        console.log('🔍 处理返回结果:', result);
-        // console.log('📋 card_data 内容:', result ? result.card_data : 'undefined');
-        
-        // 检查是否有教授卡片数据
-        if (result && result.card_data && 
-            result.card_data.type === 'professor_list' && 
-            result.card_data.professors && 
-            result.card_data.professors.length > 0) {
-          console.log('✅ 检测到教授卡片数据，教授数量:', result.card_data.professors.length);
-          // 宽泛问题：只显示简洁提示语和教授卡片
-          self.addMessage({
-            type: 'assistant',
-            content: '根据您的需求，为您找到以下教授：',
-            cardData: result.card_data,
-          });
-        } else if (result && result.response_text && result.response_text.trim()) {
-          console.log('ℹ️ 未检测到有效教授卡片数据，显示文本回复');
-          if (result.card_data) {
-            console.log('⚠️ card_data 存在但不符合条件:', result.card_data);
-          }
-          // 详细询问或其他情况：显示自然语言回复
-          self.addMessage({
-            type: 'assistant',
-            content: result.response_text,
-          });
-        } else {
-          // 没有找到任何有效信息
-          self.addMessage({
-            type: 'assistant',
-            content: '抱歉，暂未找到匹配的教授，请尝试调整搜索条件。',
-          });
-        }
-      });
+      await this.clearAllLoadingMessages();
 
-      // 持久化到当前会话
-      try {
-        const cid = self.data.currentCid || ('c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
-        if (!self.data.currentCid) {
-          self.setData({ currentCid: cid });
-          const currentCidKey = userManager.getUserCurrentCidKey();
-          wx.setStorageSync(currentCidKey, cid);
+      // extract and delete <search_result>...</search_result> from result
+      const searchResult = result.match(/<search_result>(.*?)<\/search_result>/s);
+      let cardData = null;
+      if (searchResult && searchResult.length > 0) {
+        log(`找到搜索结果: ${searchResult[1]}`);
+        result = result.replace(searchResult[0], '');
+        cardData = {
+          type: 'professor_list',
+          professors: JSON.parse(searchResult[1]).result.professors,
         }
-        
-        // 保存消息到会话
-        const conversationKey = userManager.getUserConversationKey(self.data.currentCid || cid);
-        const messages = self.data.messages.filter(function(msg) {
-          return msg.type === 'user' || msg.type === 'assistant';
-        });
-        wx.setStorageSync(conversationKey, messages);
-        
-        // 保存对话到历史记录（使用新的函数）
-        self.saveConversationToHistory();
-        
-      } catch (e) {
-        console.error('保存对话失败:', e);
+      } else {
+        log(`未找到搜索结果`);
       }
 
-      self.setData({ sending: false, inputFocus: true });
-    }).catch(function(error) {
-      console.error('调用工作流失败:', error);
-      // 立即清理所有loading消息
-      self.clearAllLoadingMessages(function() {
-        self.addMessage({
-          type: 'assistant',
-          content: '抱歉，服务暂时不可用，请稍后重试。',
-        });
+      this.addMessage({
+        type: 'assistant',
+        content: result || '抱歉，暂时无法获取回复，请稍后重试。',
+        cardData
       });
+    })();
+
+    //   // 持久化到当前会话
+    //   try {
+    //     const cid = self.data.currentCid || ('c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+    //     if (!self.data.currentCid) {
+    //       self.setData({ currentCid: cid });
+    //       const currentCidKey = userManager.getUserCurrentCidKey();
+    //       wx.setStorageSync(currentCidKey, cid);
+    //     }
+        
+    //     // 保存消息到会话
+    //     const conversationKey = userManager.getUserConversationKey(self.data.currentCid || cid);
+    //     const messages = self.data.messages.filter(function(msg) {
+    //       return msg.type === 'user' || msg.type === 'assistant';
+    //     });
+    //     wx.setStorageSync(conversationKey, messages);
+        
+    //     // 保存对话到历史记录（使用新的函数）
+    //     self.saveConversationToHistory();
+        
+    //   } catch (e) {
+    //     console.error('保存对话失败:', e);
+    //   }
+
+    //   self.setData({ sending: false, inputFocus: true });
+    // }).catch(function(error) {
+    //   console.error('调用工作流失败:', error);
+    //   // 立即清理所有loading消息
+    //   self.clearAllLoadingMessages(function() {
+    //     self.addMessage({
+    //       type: 'assistant',
+    //       content: '抱歉，服务暂时不可用，请稍后重试。',
+    //     });
+    //   });
       
-      self.setData({ sending: false, inputFocus: true });
-    });
+    //   self.setData({ sending: false, inputFocus: true });
   },
 
-  // 调用扣子智能体（使用Chat API）
+  // 调用扣子智能体
   callCozeWorkflow: function(userInput) {
-    const self = this;
-    const bot_id = wx.getStorageSync('coze_bot_id') || '7537877620181041204'; // 你的智能体ID
-    
-    // 使用当前会话ID作为conversation_id，实现多轮对话
+    const log = (message) => { console.log(`[callCozeWorkflow] ${message}`); };
     const conversation_id = this.data.currentCid || '';
-    
-    console.log('调用扣子智能体:', { userInput, bot_id, conversation_id });
-    
-    return wx.cloud.callFunction({
-      name: 'coze_workflow',
-      config: {
-        // 将客户端超时时间设置为 1200 秒 (1200000 毫秒)
-        timeout: 1200000
-      },
-      data: {
-        input: userInput,
-        bot_id: bot_id,
-        conversation_id: conversation_id,
-        mode: 'fast', // 使用快速模式，避免同步调用超时
-        user_id: 'miniprogram_user', // 小程序用户标识
-      }
-    }).then(function(res) {
-      console.log('云函数返回结果:', res);
-      
-      // 检查返回结果的基本结构
-      if (!res) {
-        throw new Error('云函数返回为空');
-      }
-      
-      if (res.errMsg && res.errMsg !== 'cloud.callFunction:ok') {
-        throw new Error(`云函数调用失败: ${res.errMsg}`);
-      }
-      
-      const r = res.result;
-      console.log('解析的result:', r);
-      
-      if (!r) {
-        throw new Error('云函数返回结果为空');
-      }
-      
-      if (r.code !== 0) {
-        const errorMsg = r.message || r.msg || '未知错误';
-        console.error('❌ 扣子智能体返回错误:', r);
-        
-        // 根据错误类型提供更友好的错误信息
-        let userFriendlyMsg = '智能体暂时不可用，请稍后重试';
-        if (errorMsg.includes('余额') || errorMsg.includes('quota')) {
-          userFriendlyMsg = '服务暂时不可用，请稍后重试';
-        } else if (errorMsg.includes('超时') || errorMsg.includes('timeout')) {
-          userFriendlyMsg = '请求超时，请稍后重试';
+    // TODO: 多轮对话
+    log(`conversation_id: ${conversation_id}`);
+
+    const cozeWorkflow = new Promise((resolve, _) => {
+      wx.cloud.callFunction({
+        name: 'coze_workflow',
+        data: {
+          input: userInput
         }
-        
-        throw new Error(userFriendlyMsg);
-      }
-      
-      const d = r.data;
-      console.log('数据部分:', d);
-      
-      if (!d) {
-        throw new Error('智能体返回数据为空');
-      }
-      
-      // 更新对话ID（如果扣子返回了新的conversation_id）
-      if (d.conversation_id && d.conversation_id !== self.data.currentCid) {
-        console.log('更新对话ID:', { 原ID: self.data.currentCid, 新ID: d.conversation_id });
-        // 保存扣子返回的真正conversation_id，用于后续多轮对话
-        self.setData({ currentCid: d.conversation_id });
-        wx.setStorageSync('current_cid', d.conversation_id);
-      }
-      
-      return {
-        response_text: d.response_text || '抱歉，暂时无法为您提供推荐。',
-        card_data: d.card_data || null
-      };
-    }).catch(function(error) {
-      console.error('💥 扣子智能体调用异常:', error);
-      // 如果是超时错误，给出更友好的提示并尝试降级处理
-      if (error && error.errMsg && error.errMsg.includes('Invoking task timed out')) {
-        console.error('检测到云函数调用超时（60s），建议使用 fast 模式或将部分处理改为异步');
-      }
-      throw error;
+      }).then((res) => {
+        resolve(res);
+      });
     });
+
+    return (async () => {
+      let result = await cozeWorkflow;
+      log(`callCozeWorkflow result: ${JSON.stringify(result)}`);
+      
+      if (result.errMsg != 'cloud.callFunction:ok') {
+        throw new Error(result.errMsg);
+      }
+
+      result = result.result;
+      if (result.code !== 0) {
+        throw new Error(result.message );
+      }
+
+      return result.data;
+    })();
   },
 
   // 添加消息
   addMessage: function(msg) {
-    const id = 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const id = 'm_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
     const message = Object.assign({ id: id }, msg);
     
     // 如果是助手消息，自动清理所有loading消息
@@ -706,22 +643,21 @@ Page({
   },
 
   // 清理所有loading类型的消息
-  clearAllLoadingMessages: function(callback) {
-    const messages = this.data.messages.filter(function(msg) {
-      return msg.type !== 'loading';
-    });
-    
-    this.setData({ messages: messages }, function() {
-      if (callback) callback();
-    });
-    
-    // 同时清理所有进度定时器
+  clearAllLoadingMessages: function() {
+    // 清理所有进度定时器
     if (this.progressIntervals) {
       Object.values(this.progressIntervals).forEach(function(interval) {
         clearInterval(interval);
       });
       this.progressIntervals = {};
     }
+
+    return new Promise((resolve, _) => {
+      const messages = this.data.messages.filter(function(msg) {
+        return msg.type !== 'loading';
+      });
+      this.setData({ messages: messages }, resolve);
+    });
   },
 
   // 更新消息
@@ -744,9 +680,9 @@ Page({
     const progressInterval = setInterval(function() {
       if (progress < maxProgress) {
         // 前期快速增长，后期缓慢
-        const increment = progress < 30 ? Math.random() * 8 + 2 : 
-                         progress < 60 ? Math.random() * 4 + 1 : 
-                         Math.random() * 2 + 0.5;
+        const increment = progress < 30 ? Math.random() * 4 + 2 : 
+                         progress < 60 ? Math.random() * 2 + 1 : 
+                         Math.random() + 0.5;
         
         progress = Math.min(progress + increment, maxProgress);
         
