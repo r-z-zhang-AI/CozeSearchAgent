@@ -193,10 +193,9 @@
              show-confirm-bar="{{false}}"
              adjust-position="{{true}}"
              cursor-spacing="{{20}}" />
-      <!-- 发送按钮 - 始终显示用于调试 -->
+      <!-- 发送按钮 -->
       <view class="send-btn {{inputValue.trim() && !sending ? '' : 'disabled'}}" 
-              bindtap="onSend"
-              catchtap="onSend">
+              bindtap="onSend">
         <image class="send-icon" src="../../assets/icons/send.svg" mode="aspectFit"/>
       </view>
     </view>

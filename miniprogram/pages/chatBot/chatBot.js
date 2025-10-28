@@ -487,7 +487,7 @@ Page({
   },
 
   // 发送消息
-  onSend: function() {
+  onSend: async function() {
     const log = (message) => { console.log(`[onSend] ${message}`); };
     const input = this.data.inputValue.trim();
     if (!input || this.data.sending) return;
@@ -511,7 +511,7 @@ Page({
     // 启动进度动画
     this.startProgressAnimation(loadingMsgId);
 
-    return (async () => {
+    try {
       let result = await this.callCozeWorkflow(input);
       log(`处理返回结果: ${JSON.stringify(result)}`);
       
@@ -537,43 +537,25 @@ Page({
         content: result || '抱歉，暂时无法获取回复，请稍后重试。',
         cardData
       });
-    })();
 
-    //   // 持久化到当前会话
-    //   try {
-    //     const cid = self.data.currentCid || ('c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
-    //     if (!self.data.currentCid) {
-    //       self.setData({ currentCid: cid });
-    //       const currentCidKey = userManager.getUserCurrentCidKey();
-    //       wx.setStorageSync(currentCidKey, cid);
-    //     }
-        
-    //     // 保存消息到会话
-    //     const conversationKey = userManager.getUserConversationKey(self.data.currentCid || cid);
-    //     const messages = self.data.messages.filter(function(msg) {
-    //       return msg.type === 'user' || msg.type === 'assistant';
-    //     });
-    //     wx.setStorageSync(conversationKey, messages);
-        
-    //     // 保存对话到历史记录（使用新的函数）
-    //     self.saveConversationToHistory();
-        
-    //   } catch (e) {
-    //     console.error('保存对话失败:', e);
-    //   }
-
-    //   self.setData({ sending: false, inputFocus: true });
-    // }).catch(function(error) {
-    //   console.error('调用工作流失败:', error);
-    //   // 立即清理所有loading消息
-    //   self.clearAllLoadingMessages(function() {
-    //     self.addMessage({
-    //       type: 'assistant',
-    //       content: '抱歉，服务暂时不可用，请稍后重试。',
-    //     });
-    //   });
+      // 保存对话到历史记录
+      this.saveConversationToHistory();
       
-    //   self.setData({ sending: false, inputFocus: true });
+    } catch (error) {
+      console.error('调用工作流失败:', error);
+      
+      // 清理loading消息
+      await this.clearAllLoadingMessages();
+      
+      // 添加错误提示消息
+      this.addMessage({
+        type: 'assistant',
+        content: '抱歉，服务暂时不可用，请稍后重试。',
+      });
+    } finally {
+      // 确保无论成功失败都重置发送状态
+      this.setData({ sending: false, inputFocus: true });
+    }
   },
 
   // 调用扣子智能体
@@ -1067,54 +1049,73 @@ Page({
 
   // 保存对话到历史记录
   saveConversationToHistory: function() {
-    const conversationsKey = userManager.getUserConversationsKey();
-    const conversations = wx.getStorageSync(conversationsKey) || [];
-    const currentCid = this.data.currentCid;
-    const messages = this.data.messages;
-    
-    if (!currentCid || messages.length === 0) return;
-    
-    // 查找是否已存在该对话
-    const existingIndex = conversations.findIndex(conv => conv.conversationId === currentCid);
-    
-    // 获取最后一条消息作为预览
-    const lastMessage = messages[messages.length - 1];
-    const lastMsg = lastMessage ? 
-      (lastMessage.content || '教授推荐结果') : '新对话';
-    
-    // 生成或更新对话标题
-    const title = this.data.currentTitle || this.generateConversationTitle(messages);
-    
-    const conversationData = {
-      conversationId: currentCid,
-      title: title,
-      lastMsg: lastMsg.substring(0, 30) + (lastMsg.length > 30 ? '...' : ''),
-      timestamp: Date.now(),
-      displayTime: this.formatTime(Date.now()),
-      messageCount: messages.length
-    };
-    
-    if (existingIndex >= 0) {
-      // 更新已存在的对话
-      conversations[existingIndex] = conversationData;
-    } else {
-      // 添加新对话到开头
-      conversations.unshift(conversationData);
+    try {
+      const conversationsKey = userManager.getUserConversationsKey();
+      const conversations = wx.getStorageSync(conversationsKey) || [];
+      
+      // 确保有当前会话ID，如果没有则创建
+      let currentCid = this.data.currentCid;
+      if (!currentCid) {
+        currentCid = 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
+        this.setData({ currentCid: currentCid });
+        const currentCidKey = userManager.getUserCurrentCidKey();
+        wx.setStorageSync(currentCidKey, currentCid);
+      }
+      
+      const messages = this.data.messages;
+      if (messages.length === 0) return;
+      
+      // 保存消息到会话
+      const conversationKey = userManager.getUserConversationKey(currentCid);
+      const validMessages = messages.filter(function(msg) {
+        return msg.type === 'user' || msg.type === 'assistant';
+      });
+      wx.setStorageSync(conversationKey, validMessages);
+      
+      // 查找是否已存在该对话
+      const existingIndex = conversations.findIndex(conv => conv.conversationId === currentCid);
+      
+      // 获取最后一条消息作为预览
+      const lastMessage = messages[messages.length - 1];
+      const lastMsg = lastMessage ? 
+        (lastMessage.content || '教授推荐结果') : '新对话';
+      
+      // 生成或更新对话标题
+      const title = this.data.currentTitle || this.generateConversationTitle(messages);
+      
+      const conversationData = {
+        conversationId: currentCid,
+        title: title,
+        lastMsg: lastMsg.substring(0, 30) + (lastMsg.length > 30 ? '...' : ''),
+        updatedAt: Date.now(),
+        displayTime: this.formatTime(Date.now()),
+        messageCount: messages.length
+      };
+      
+      if (existingIndex >= 0) {
+        // 更新已存在的对话
+        conversations[existingIndex] = conversationData;
+      } else {
+        // 添加新对话到开头
+        conversations.unshift(conversationData);
+      }
+      
+      // 限制历史记录数量，保留最近50个对话
+      if (conversations.length > 50) {
+        conversations.splice(50);
+      }
+      
+      // 保存到存储
+      wx.setStorageSync(conversationsKey, conversations);
+      
+      // 更新当前显示的标题和会话列表
+      this.setData({ 
+        currentTitle: title,
+        conversations: conversations 
+      });
+    } catch (e) {
+      console.error('保存对话到历史记录失败:', e);
     }
-    
-    // 限制历史记录数量，保留最近50个对话
-    if (conversations.length > 50) {
-      conversations.splice(50);
-    }
-    
-    // 保存到存储
-    wx.setStorageSync(conversationsKey, conversations);
-    
-    // 更新当前显示的标题
-    this.setData({ 
-      currentTitle: title,
-      conversations: conversations 
-    });
   },
 
   // AI生成对话标题

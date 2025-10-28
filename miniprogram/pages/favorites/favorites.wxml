@@ -5,7 +5,7 @@
     <view class="search-box">
       <view class="search-input-wrapper">
         <input class="search-input" placeholder="搜索姓名、学院、方向" confirm-type="search" bindconfirm="onSearch" bindinput="onInput" value="{{keyword}}"/>
-        <button class="search-btn" size="mini" bindtap="onSearch" style="height: 53rpx; display: block; box-sizing: border-box; left: 600rpx; top: 11rpx">搜索</button>
+        <button class="search-btn" bindtap="onSearch" style="width: 107rpx; display: flex; box-sizing: border-box; left: 581rpx; top: 37rpx">搜索</button>
       </view>
     </view>
     <scroll-view class="tag-scroll" scroll-x>
